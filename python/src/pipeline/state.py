@@ -19,9 +19,21 @@ class ClauseType(str, Enum):
 
 
 class RiskLevel(str, Enum):
-    RED = "red"
-    YELLOW = "yellow"
-    GREEN = "green"
+    CRITICAL = "CRITICAL"
+    HIGH = "HIGH"
+    MEDIUM = "MEDIUM"
+    LOW = "LOW"
+
+    @classmethod
+    def from_legacy(cls, value: str) -> "RiskLevel":
+        normalized = value.strip().lower()
+        if normalized in {"red", "critical", "high", "severe", "danger"}:
+            return cls.CRITICAL
+        if normalized in {"yellow", "medium", "minor", "moderate", "warning"}:
+            return cls.MEDIUM
+        if normalized in {"green", "low", "aligned", "ok", "safe"}:
+            return cls.LOW
+        return cls.LOW
 
 
 class Clause(BaseModel):

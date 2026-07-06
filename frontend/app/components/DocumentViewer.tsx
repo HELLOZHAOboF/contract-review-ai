@@ -3,12 +3,10 @@
 import { useRef, useState } from "react";
 
 // ─────────────────────────────────────────────────────────────
-// DOCUMENT VIEWER
-// Left: contract rendered as a clean paper document with
-//       inline colour-coded clause highlights
-// Right: compact clause map sidebar
-// Clicking either → fires onClauseClick(key) so parent can
-//   switch to Redlines tab and scroll to that clause
+// 文档查看器
+// 左侧：合同正文，内嵌高亮风险条款
+// 右侧：条款目录侧边栏
+// 点击任意高亮或目录项，会跳转到红线分析并定位对应条款
 // ─────────────────────────────────────────────────────────────
 
 interface Clause {
@@ -26,7 +24,7 @@ interface Props {
   onClauseClick: (clauseKey: string) => void;
 }
 
-// ── Cream/sage palette per deviation ──
+// ── 按风险等级区分配色 ──
 const STYLES = {
   critical: {
     bg:        "rgba(184,84,80,0.11)",
@@ -151,7 +149,6 @@ export default function DocumentViewer({ contractText, clauses, onClauseClick }:
           font-family: 'DM Mono', monospace;
           font-size: 10px;
           letter-spacing: 2px;
-          text-transform: uppercase;
           color: #7a9088;
         }
         .dv-doc-counts {
@@ -224,7 +221,6 @@ export default function DocumentViewer({ contractText, clauses, onClauseClick }:
           font-family: 'DM Mono', monospace;
           font-size: 10px;
           letter-spacing: 1.5px;
-          text-transform: uppercase;
           color: #7a9088;
           margin-bottom: 12px;
           padding-bottom: 10px;
@@ -286,7 +282,6 @@ export default function DocumentViewer({ contractText, clauses, onClauseClick }:
           font-size: 9px;
           padding: 1px 6px;
           border-radius: 4px;
-          text-transform: uppercase;
           letter-spacing: 0.5px;
           flex-shrink: 0;
         }
@@ -319,11 +314,11 @@ export default function DocumentViewer({ contractText, clauses, onClauseClick }:
 
           {/* Header row */}
           <div className="dv-doc-meta">
-            <div className="dv-doc-title">Clinical Trial Agreement</div>
+            <div className="dv-doc-title">工程与专业服务合同审查</div>
             <div className="dv-doc-counts">
-              <span style={{ color: "#b85450" }}>● {counts.critical} critical</span>
-              <span style={{ color: "#c9974a" }}>● {counts.minor} minor</span>
-              <span style={{ color: "#6a9e78" }}>● {counts.aligned} aligned</span>
+              <span style={{ color: "#b85450" }}>● {counts.critical} 高风险</span>
+              <span style={{ color: "#c9974a" }}>● {counts.minor} 需关注</span>
+              <span style={{ color: "#6a9e78" }}>● {counts.aligned} 已对齐</span>
             </div>
           </div>
 
@@ -363,7 +358,7 @@ export default function DocumentViewer({ contractText, clauses, onClauseClick }:
                 >
                   <span style={{ marginRight: 4 }}>{s.icon}</span>
                   {seg.clauseKey}
-                  <span style={{ opacity: 0.55, marginLeft: 6 }}>→ view redline</span>
+                  <span style={{ opacity: 0.55, marginLeft: 6 }}>→ 查看分析</span>
                 </span>
 
                 {seg.text}
@@ -372,24 +367,24 @@ export default function DocumentViewer({ contractText, clauses, onClauseClick }:
           })}
 
           <div className="dv-doc-footer">
-            Highlights indicate ACTA compliance status · Click any highlighted passage to view its full redline analysis
+            高亮部分表示条款风险状态 · 点击任意高亮内容即可查看完整分析
           </div>
         </div>
       </div>
 
       {/* ── RIGHT: CLAUSE MAP SIDEBAR ── */}
       <div className="dv-sidebar">
-        <div className="dv-sb-header">Clause Map</div>
+        <div className="dv-sb-header">条款目录</div>
 
         <div className="dv-legend">
           <div className="dv-legend-item">
-            <div className="dv-legend-dot" style={{ background: "#b85450" }} />Critical
+            <div className="dv-legend-dot" style={{ background: "#b85450" }} />高风险
           </div>
           <div className="dv-legend-item">
-            <div className="dv-legend-dot" style={{ background: "#c9974a" }} />Minor
+            <div className="dv-legend-dot" style={{ background: "#c9974a" }} />需关注
           </div>
           <div className="dv-legend-item">
-            <div className="dv-legend-dot" style={{ background: "#6a9e78" }} />Aligned
+            <div className="dv-legend-dot" style={{ background: "#6a9e78" }} />已对齐
           </div>
         </div>
 
@@ -418,7 +413,7 @@ export default function DocumentViewer({ contractText, clauses, onClauseClick }:
               <div className="dv-sb-snippet">
                 {clause.text.slice(0, 88)}{clause.text.length > 88 ? "…" : ""}
               </div>
-              <div className="dv-sb-hint">↗ jump to redline analysis</div>
+              <div className="dv-sb-hint">↗ 跳转到红线分析</div>
             </div>
           );
         })}

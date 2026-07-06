@@ -1,120 +1,104 @@
-# ACTA — AI Contract Analysis
+# Contract Review AI
 
-ACTA is an AI-powered contract review platform that automatically analyzes legal contracts to identify risks, extract key clauses, check compliance, and suggest improvements. It features a multi-agent LangGraph pipeline backed by Gemini or K2 AI reasoning models, with a Next.js frontend and FastAPI backend.
+A full-stack AI-powered contract review platform for engineering consulting and professional service agreements.
+It helps users upload contracts, extract text, identify risks, generate redline suggestions, and explore follow-up questions through an interactive review workflow.
 
-## Features
+## 项目简介
 
-- Upload contracts in PDF, DOCX, or TXT format.
-- Automated clause extraction and risk scoring.
-- Compliance checking and improvement suggestions.
-- Document redlining with proposed changes.
-- Interactive chat Q&A about any uploaded contract.
-- Contract rewriting to standardized ACTA format.
+这是一个面向工程咨询、专业服务、知识产权等合同场景的 AI 智能审查平台。
+系统支持上传合同文件后自动解析文本、识别条款风险、生成红线建议，并提供交互式问答、流程预测和角色画像分析，帮助用户更快理解合同内容并发现潜在问题。
 
-## Prerequisites
+This project is built to make contract review faster, clearer, and more explainable for both technical and non-technical reviewers.
 
-- Python 3.10+
-- Node.js 18+
-- An Gemini API key **or** a K2 API key
+## 核心功能
 
-## Installation
+- 合同文件上传与解析，支持 PDF / DOCX / TXT
+- AI 条款审查与风险分级
+- 红线建议与合同修订提示
+- 可视化文档浏览与条款跳转
+- 交互式 AI 问答与补充追问
+- 审查流程预测与角色画像分析
+- PDF 报告导出
 
-### 1. Clone the repository
+## 技术栈
 
-```bash
-git clone https://github.com/doublehan2023/hackprinceton-agent.git
-cd hackprinceton-agent
-```
+### Frontend
+- Next.js 16
+- React 19
+- TypeScript
+- Tailwind CSS
+- Client-side UI state and interactive document views
 
-### 2. Set up environment variables
+### Backend
+- FastAPI
+- Python 3.12
+- LangGraph / LangChain
+- Pydantic
+- PyPDF2 / PyMuPDF / python-docx
+- ReportLab for PDF export
 
-```bash
-cp .env.example .env
-```
+### Other
+- File upload and document parsing pipeline
+- Risk scoring and recommendation engine
+- Contract analysis workflow orchestration
 
-Edit `.env` and fill in your API credentials:
+## 项目亮点
 
-```env
-# Use OpenAI (required if not using K2)
-GEMINI_API_KEY=your_gemini_api_key_here
-GEMINI_MODEL=gemini 2.5 Flash
+- **端到端全流程**：从文件上传、文本解析到风险识别、建议生成与报告导出，一次完成
+- **面试友好**：每个分析结果都可解释，方便展示思路而不是只展示结论
+- **交互性强**：用户可针对系统追问继续补充信息并重新分析
+- **适合真实业务场景**：覆盖工程咨询和专业服务合同中的高频审查需求
 
-# Use K2 Think reasoning model (optional — takes priority over OpenAI if set)
-K2_API_KEY=your_k2_api_key_here
-K2_MODEL=MBZUAI-IFM/K2-Think-v2
-```
+## 本地运行
 
-### 3. Set up the Python backend
+### 1. 启动后端
 
-```bash
+```powershell
 cd python
-python -m venv venv
-source venv/bin/activate      # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
+.\venv\Scripts\python.exe -m uvicorn src.api.main:app --host 0.0.0.0 --port 8000
 ```
 
-### 4. Set up the frontend
+如果你使用的是系统 Python，可以改成：
 
-```bash
-cd ../frontend
-npm install
-```
-
-## Running the App
-
-Open two terminal windows from the project root.
-
-**Terminal 1 — Backend:**
-
-```bash
+```powershell
 cd python
-source venv/bin/activate      # On Windows: venv\Scripts\activate
-python -m src.api.main
+python -m uvicorn src.api.main:app --host 0.0.0.0 --port 8000
 ```
 
-The API will be available at `http://localhost:8000`.
+### 2. 启动前端
 
-**Terminal 2 — Frontend:**
-
-```bash
+```powershell
 cd frontend
+npm install
 npm run dev
 ```
 
-Open `http://localhost:3000` in your browser.
+前端默认运行在 `http://localhost:3000`
 
-## Running Tests
+## 目录结构
 
-```bash
-cd python
-source venv/bin/activate
-pytest
+```text
+frontend/   # Next.js 前端
+python/     # FastAPI + AI 分析后端
 ```
 
-## Project Structure
+## 截图建议
 
-```
-hackprinceton-agent/
-├── frontend/          # Next.js 16 + React 19 + Tailwind CSS frontend
-├── python/            # FastAPI backend
-│   ├── src/
-│   │   ├── agents/    # LangGraph agent nodes (clause extraction, risk, compliance)
-│   │   ├── api/       # FastAPI routes and schemas
-│   │   ├── parsers/   # PDF/DOCX/TXT document parsers
-│   │   ├── pipeline/  # LangGraph workflow graph
-│   │   └── services/  # Review, chat, and rewrite orchestration
-│   └── tests/
-├── uploads/           # Uploaded contract files
-└── .env.example       # Environment variable template
-```
+如果你想让面试官更快理解项目，建议在这里补充：
 
-## API Endpoints
+- 首页截图
+- 上传合同后的分析结果截图
+- 红线建议截图
+- 角色画像 / 流程预测截图
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/api/upload` | Upload a contract file |
-| `POST` | `/api/analyze` | Analyze an uploaded contract |
-| `POST` | `/api/v1/review` | Review inline contract text |
-| `POST` | `/api/acta-rewrite` | Rewrite contract to ACTA format |
-| `POST` | `/api/chat` | Chat Q&A about a contract |
-| `GET` | `/api/health` | Health check |
+## 后续可优化方向
+
+- 增加更多合同类型模板
+- 优化风险规则库
+- 支持多语言合同
+- 增加用户登录和历史记录保存
+- 加入更丰富的可视化图表
+
+## License
+
+This project is for portfolio and demonstration purposes unless otherwise specified.

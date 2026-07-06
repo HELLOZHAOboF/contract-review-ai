@@ -32,6 +32,28 @@ def build_state(payload: AnalyzeRequest) -> ContractReviewState:
     )
 
 
+def _build_clarifying_questions(result: ContractReviewState) -> list[str]:
+    questions: list[str] = []
+    missing = {item.strip().lower() for item in result.missing_clause_types if item.strip()}
+
+    if not missing:
+        return questions
+
+    if any(keyword in missing for keyword in {"payment terms", "payment", "付款条款"}):
+        questions.append("这份合同是否包含付款节点、付款比例或逾期付款责任？")
+
+    if any(keyword in missing for keyword in {"governing law", "law", "准据法", "dispute resolution"}):
+        questions.append("这份合同是否已明确适用法律以及争议解决方式（诉讼或仲裁）？")
+
+    if any(keyword in missing for keyword in {"termination", "解除条款", "confidentiality", "保密条款"}):
+        questions.append("这份合同是否需要补充解除条件、保密义务或违约责任相关条款？")
+
+    if not questions and missing:
+        questions.append(f"是否可以补充以下关键信息：{', '.join(result.missing_clause_types)}？")
+
+    return questions[:3]
+
+
 def normalize_review_response(result: ContractReviewState) -> AnalyzeResponse:
     suggestion_map = {suggestion.clause_id: suggestion for suggestion in result.suggestions}
     clauses: list[ClausePayload] = []
@@ -56,7 +78,7 @@ def normalize_review_response(result: ContractReviewState) -> AnalyzeResponse:
                         reason=redline.reason or redline.rationale,
                         priority=redline.priority,
                     )
-                    if redline is not None and finding.risk_level is not RiskLevel.GREEN
+                    if redline is not None and finding.risk_level is not RiskLevel.LOW
                     else None
                 ),
                 model_used=result.extraction_model,
@@ -79,6 +101,7 @@ def normalize_review_response(result: ContractReviewState) -> AnalyzeResponse:
             for suggestion in result.suggestions
         ],
         missing_clause_types=result.missing_clause_types,
+        clarifying_questions=_build_clarifying_questions(result),
         extraction_model=result.extraction_model,
         version_diff=result.version_diff,
         risk_score=result.risk_score,

@@ -30,7 +30,7 @@ def _load_risk_rules() -> dict[ClauseType, list[dict[str, object]]]:
             {
                 "name": str(item["name"]),
                 "patterns": [str(pattern) for pattern in item.get("patterns", [])],
-                "risk_level": RiskLevel(str(item["risk_level"])),
+                "risk_level": RiskLevel.from_legacy(str(item["risk_level"])),
                 "summary": str(item["summary"]),
                 "buyer_impact": str(item["buyer_impact"]),
                 "seller_impact": str(item["seller_impact"]),
@@ -65,22 +65,22 @@ def evaluate_clause_risk(clause: Clause) -> RiskFinding:
     missing_terms = [term for term in required_terms if term not in clause_text_lower]
 
     if not required_terms:
-        risk_level = RiskLevel.YELLOW
+        risk_level = RiskLevel.MEDIUM
         deviation_summary = "Clause needs manual mapping to the closest CTA baseline section."
         suggested_action = "Route this clause for legal review."
         confidence = 0.5
     elif len(matched_terms) == len(required_terms):
-        risk_level = RiskLevel.GREEN
+        risk_level = RiskLevel.LOW
         deviation_summary = "Clause appears aligned with the preferred CTA baseline."
         suggested_action = "No redline required."
         confidence = min(0.95, clause.classification_confidence + 0.2)
     elif matched_terms:
-        risk_level = RiskLevel.YELLOW
+        risk_level = RiskLevel.MEDIUM
         deviation_summary = "Clause partially aligns with the preferred CTA baseline but misses protective terms."
         suggested_action = "Review fallback language and negotiate the missing protections."
         confidence = min(0.9, clause.classification_confidence + 0.05)
     else:
-        risk_level = RiskLevel.RED
+        risk_level = RiskLevel.CRITICAL
         deviation_summary = "Clause materially departs from the preferred CTA baseline or omits core protections."
         suggested_action = "Escalate this clause and propose replacement language."
         confidence = max(0.45, clause.classification_confidence - 0.05)
@@ -110,7 +110,7 @@ def find_missing_clause_types(clauses: list[Clause]) -> list[str]:
 
 
 def build_suggestion_for_finding(finding: RiskFinding) -> Suggestion | None:
-    if finding.risk_level is RiskLevel.GREEN or finding.needs_human_review:
+    if finding.risk_level is RiskLevel.LOW or finding.needs_human_review:
         return None
 
     playbook = PLAYBOOK[finding.clause_type]

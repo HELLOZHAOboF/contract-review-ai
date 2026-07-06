@@ -12,6 +12,7 @@ class AnalyzeRequest(BaseModel):
 class ReviewRequest(BaseModel):
     text: str = Field(min_length=1)
     title: str = "Contract Review"
+    filename: str = "inline.txt"
     with_human_review: bool = False
 
 
@@ -62,6 +63,7 @@ class AnalyzeResponse(BaseModel):
     clauses: list[ClausePayload]
     suggestions: list[SuggestionPayload] = Field(default_factory=list)
     missing_clause_types: list[str] = Field(default_factory=list)
+    clarifying_questions: list[str] = Field(default_factory=list)
     extraction_model: str | None = None
     version_diff: str = ""
     risk_score: int = 0

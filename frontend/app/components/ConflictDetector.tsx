@@ -65,11 +65,11 @@ function detectConflicts(contracts: ContractEntry[]): Conflict[] {
     conflicts.push({
       type: "jurisdiction",
       severity: "warning",
-      title: "Conflicting governing law positions",
-      description: `The CTA set references multiple governing-law states: ${uniqueStates.join(", ")}.`,
+      title: "管辖法律设置不一致",
+      description: `当前合同组引用了多个管辖州：${uniqueStates.join(", ")}。`,
       affectedSites: jurisdictionStates.map(entry => entry.siteName),
-      affectedClause: "Governing Law",
-      recommendation: "Standardize the governing-law fallback before parallel negotiations drift further apart.",
+      affectedClause: "争议解决 / 准据法",
+      recommendation: "建议先统一准据法口径，再推进后续谈判。",
     });
   }
 
@@ -85,11 +85,11 @@ function detectConflicts(contracts: ContractEntry[]): Conflict[] {
     conflicts.push({
       type: "payment_inconsistency",
       severity: "warning",
-      title: "Payment timing is inconsistent across sites",
-      description: `The agreements use different invoice timing terms (${uniquePaymentDays.join(", ")} days), which can create budget and treasury friction.`,
+      title: "付款周期不一致",
+      description: `不同合同的付款周期存在差异（${uniquePaymentDays.join(", ")} 天），容易造成预算与结算口径不统一。`,
       affectedSites: paymentTerms.map(entry => entry.siteName),
-      affectedClause: "Payment Terms",
-      recommendation: "Align the sponsor payment baseline before finalizing site-specific budgets.",
+      affectedClause: "付款条款",
+      recommendation: "建议先统一付款周期和开票要求，再同步各项目版本。",
     });
   }
 
@@ -105,11 +105,11 @@ function detectConflicts(contracts: ContractEntry[]): Conflict[] {
     conflicts.push({
       type: "publication_window",
       severity: "warning",
-      title: "Publication review windows do not match",
-      description: `Publication rights vary across the CTA set (${uniquePublicationDays.join(", ")} day review windows), which can undermine a uniform sponsor position.`,
+      title: "成果发表/披露窗口不一致",
+      description: `不同合同对成果审阅窗口的设置不一致（${uniquePublicationDays.join(", ")} 天），可能影响统一管理。`,
       affectedSites: publicationWindows.map(entry => entry.siteName),
-      affectedClause: "Publication Rights",
-      recommendation: "Pick one publication-review standard and push that consistently across all sites.",
+      affectedClause: "成果发表 / 审阅",
+      recommendation: "建议统一审阅期限与披露规则，避免后续版本分裂。",
     });
   }
 
@@ -128,11 +128,11 @@ function detectConflicts(contracts: ContractEntry[]): Conflict[] {
     conflicts.push({
       type: "indemnification_mismatch",
       severity: "critical",
-      title: "Indemnification obligations diverge between contracts",
-      description: "Some agreements appear mutual while others lean sponsor-only, creating uneven liability exposure across active sites.",
+      title: "赔偿责任安排不一致",
+      description: "部分合同体现互相赔偿，部分合同偏向单方赔偿，可能导致整体责任边界不一致。",
       affectedSites: indemnificationProfiles.map(entry => entry.siteName),
-      affectedClause: "Indemnification",
-      recommendation: "Re-anchor all sites to one indemnification fallback before further redline rounds.",
+      affectedClause: "赔偿责任",
+      recommendation: "建议统一赔偿责任模板后，再推进各合同的个性化修改。",
     });
   }
 
@@ -155,11 +155,11 @@ function detectConflicts(contracts: ContractEntry[]): Conflict[] {
     conflicts.push({
       type: "exclusive_ip",
       severity: "critical",
-      title: "IP ownership positions conflict across the CTA set",
-      description: "Different sites appear to be receiving materially different IP ownership treatment, which can create overlapping rights if inventions arise.",
+      title: "知识产权归属口径冲突",
+      description: "不同合同对知识产权归属的处理存在明显差异，可能导致成果权属冲突。",
       affectedSites: ipProfiles.map(entry => entry.siteName),
-      affectedClause: "Intellectual Property",
-      recommendation: "Normalize IP ownership language now to avoid conflicting invention-right allocations.",
+      affectedClause: "知识产权",
+      recommendation: "建议先统一知识产权归属条款，再处理各项目的例外情形。",
     });
   }
 
@@ -175,9 +175,9 @@ interface Props {
 
 export default function ConflictDetector({ currentContract }: Props) {
   const [contracts, setContracts] = useState<ContractEntry[]>([{
-    id: "current", siteName: "Current Contract",
+    id: "current", siteName: "当前合同",
     filename: currentContract.filename, clauses: currentContract.clauses,
-    uploadedAt: new Date().toLocaleDateString(),
+    uploadedAt: new Date().toLocaleDateString("zh-CN"),
   }]);
   const [newSiteName, setNewSiteName] = useState("");
   const [newFile, setNewFile] = useState<File | null>(null);
@@ -197,7 +197,7 @@ export default function ConflictDetector({ currentContract }: Props) {
     setContracts(prev => [...prev, {
       id: `contract-${Date.now()}`, siteName: newSiteName,
       filename: newFile.name, clauses: mockClauses,
-      uploadedAt: new Date().toLocaleDateString(),
+      uploadedAt: new Date().toLocaleDateString("zh-CN"),
     }]);
     setNewSiteName(""); setNewFile(null); setAddingContract(false); setScanned(false);
   };
@@ -335,9 +335,9 @@ export default function ConflictDetector({ currentContract }: Props) {
       `}</style>
 
       <div className="cd-intro">
-        <div className="cd-intro-title">Multi-party conflict detector</div>
+        <div className="cd-intro-title">多合同冲突检测</div>
         <div className="cd-intro-sub">
-          Upload multiple CTAs to detect cross-contract inconsistencies — exclusive IP double-grants, jurisdiction conflicts, payment rate mismatches.
+          上传多份合同后，可自动发现跨合同不一致问题，例如知识产权归属冲突、管辖法律冲突、付款周期不一致等。
         </div>
       </div>
 
@@ -353,7 +353,7 @@ export default function ConflictDetector({ currentContract }: Props) {
             </div>
             <div className="contract-item-date">{c.uploadedAt}</div>
             {c.id === "current"
-              ? <span className="current-tag">current</span>
+              ? <span className="current-tag">当前</span>
               : <button className="contract-remove" onClick={() => removeContract(c.id)}>✕</button>
             }
           </div>
@@ -364,42 +364,42 @@ export default function ConflictDetector({ currentContract }: Props) {
         <div className="add-panel">
           <div className="add-row">
             <div>
-              <div className="add-label">Site name</div>
-              <input className="add-input" placeholder="e.g. Mayo Clinic" value={newSiteName} onChange={e => setNewSiteName(e.target.value)} />
+              <div className="add-label">项目/客户名称</div>
+              <input className="add-input" placeholder="例如：某工程咨询机构" value={newSiteName} onChange={e => setNewSiteName(e.target.value)} />
             </div>
             <div>
-              <div className="add-label">CTA file</div>
+              <div className="add-label">合同文件</div>
               <input type="file" accept=".txt,.docx,.pdf"
                 style={{ padding: "7px 12px", background: "#fafaf4", border: "1px solid rgba(90,110,90,0.18)", borderRadius: 8, color: "#7a9088", fontSize: 12, width: "100%" }}
                 onChange={e => setNewFile(e.target.files?.[0] || null)} />
             </div>
-            <button className="add-btn" onClick={handleAddContract} disabled={!newFile || !newSiteName.trim()}>Add</button>
+            <button className="add-btn" onClick={handleAddContract} disabled={!newFile || !newSiteName.trim()}>添加</button>
           </div>
         </div>
       )}
 
       <div className="action-row">
         <button className="add-contract-btn" onClick={() => setAddingContract(!addingContract)}>
-          {addingContract ? "Cancel" : "+ Add another contract"}
+          {addingContract ? "取消" : "+ 再添加一份合同"}
         </button>
         <button className="scan-btn" onClick={handleScan} disabled={contracts.length < 2 || scanning}>
           {scanning
-            ? <><span className="spin-ring" /> Scanning for conflicts…</>
-            : `Scan ${contracts.length} contracts for conflicts`
+            ? <><span className="spin-ring" /> 正在扫描冲突…</>
+            : `扫描 ${contracts.length} 份合同`
           }
         </button>
       </div>
 
       {!scanned && !scanning && (
         <div className="scan-ready">
-          Add 2 or more contracts above, then click scan to detect cross-contract inconsistencies.<br />
-          Works best with 3+ active site contracts.
+          请先添加 2 份及以上合同，再点击扫描以检测跨合同不一致问题。<br />
+          3 份及以上合同时效果更好。
         </div>
       )}
 
       {scanned && conflicts.length === 0 && (
         <div className="no-conflicts">
-          No cross-contract conflicts detected across {contracts.length} agreements
+          已扫描 {contracts.length} 份合同，未发现跨合同冲突。
         </div>
       )}
 
@@ -424,7 +424,7 @@ export default function ConflictDetector({ currentContract }: Props) {
                   <span className="clause-tag">{c.affectedClause}</span>
                 </div>
                 <div className="conflict-rec" style={{ background: bg, borderLeftColor: color }}>
-                  <strong style={{ color }}>Fix: </strong>{c.recommendation}
+                  <strong style={{ color }}>建议： </strong>{c.recommendation}
                 </div>
               </div>
             </div>

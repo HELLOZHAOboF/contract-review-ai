@@ -18,79 +18,79 @@ interface PersonaProfile {
 
 const PERSONAS: PersonaProfile[] = [
   {
-    id: "academic", name: "Academic Medical Center", shortName: "AMC",
+    id: "engineering", name: "工程咨询机构", shortName: "工程咨询",
     color: "#b85450", bg: "rgba(184,84,80,0.06)", border: "rgba(184,84,80,0.2)",
-    description: "Large research universities (Mayo, Johns Hopkins, UCSF). Heavy IP protection stance, slow legal review cycles, faculty publication rights are non-negotiable.",
-    avgDaysToClose: 112, negotiationStyle: "Adversarial — multiple rounds expected",
+    description: "大型工程咨询与全过程造价咨询机构，通常关注服务范围、责任边界、付款节点、成果交付标准和违约责任。",
+    avgDaysToClose: 112, negotiationStyle: "审慎型 — 多轮条款确认",
     tendencies: [
-      { clause: "Intellectual Property", likelihood: 89, note: "Will demand site retains background IP and any improvements to existing technology." },
-      { clause: "Publication Rights", likelihood: 94, note: "Faculty culture demands right to publish. Will reject >60-day delays. Expect 30-day counter-proposal." },
-      { clause: "Indemnification", likelihood: 76, note: "Will push back on blanket sponsor indemnification. Typically demands mutual negligence-based only." },
-      { clause: "Confidentiality", likelihood: 45, note: "Usually acceptable at 5 years. May request academic disclosure carve-outs." },
-      { clause: "Payment Terms", likelihood: 52, note: "F&A rate disputes common — will often push above 26% cap." },
+      { clause: "服务范围", likelihood: 89, note: "会重点确认工作内容边界、是否包含驻场、复核和变更服务。" },
+      { clause: "成果交付", likelihood: 94, note: "非常关注交付标准、成果清单、提交时间和验收口径。" },
+      { clause: "责任限制", likelihood: 76, note: "通常会对无限责任、过高违约金和过宽赔偿范围比较敏感。" },
+      { clause: "保密条款", likelihood: 45, note: "一般可接受，但会关注是否覆盖项目资料、图纸和报价信息。" },
+      { clause: "付款条款", likelihood: 52, note: "会重点关注付款节点、发票要求、付款周期和审价配合。" },
     ],
     preEmptiveStrategies: [
-      "Send ACTA baseline IP clause pre-emptively with cover note explaining mutual protection",
-      "Explicitly grant 60-day publication review period upfront — don't wait for them to ask",
-      "Cap F&A at 26% in initial draft to avoid anchor negotiation",
-      "Include faculty co-investigator acknowledgment language to reduce publication friction",
+      "先明确服务范围和成果清单，减少后续争议",
+      "在初稿中直接给出交付周期和验收标准",
+      "把责任上限、违约金和赔偿范围写清楚",
+      "提前约定付款节点和发票要求，避免回合拉长",
     ],
   },
   {
-    id: "community", name: "Community Hospital", shortName: "Community",
+    id: "ip", name: "知识产权 / 专利代理机构", shortName: "IP/专利",
     color: "#c9974a", bg: "rgba(201,151,74,0.06)", border: "rgba(201,151,74,0.2)",
-    description: "Regional hospitals without dedicated research legal teams. Often use outside counsel unfamiliar with ACTA. Slower due to inexperience, not adversarial intent.",
-    avgDaysToClose: 78, negotiationStyle: "Inexperienced — education-driven delays",
+    description: "知识产权、专利申请与专利布局相关服务机构，通常关注成果归属、保密义务、代理权限、费用结算和违约责任。",
+    avgDaysToClose: 78, negotiationStyle: "专业型 — 注重证据与边界",
     tendencies: [
-      { clause: "Subject Injury", likelihood: 82, note: "Unfamiliar with ACTA subject injury standards. Outside counsel often over-protects." },
-      { clause: "Payment Terms", likelihood: 71, note: "Budget unfamiliarity — often need itemized cost explanations. Invoice disputes common mid-trial." },
-      { clause: "Governing Law", likelihood: 58, note: "Will insist on local state jurisdiction. Rarely a dealbreaker but adds negotiation rounds." },
-      { clause: "Intellectual Property", likelihood: 22, note: "Community hospitals rarely push back on IP — they don't have research IP infrastructure." },
-      { clause: "Publication Rights", likelihood: 18, note: "Not a faculty-driven institution — publication rights rarely contested." },
+      { clause: "知识产权归属", likelihood: 82, note: "会重点确认委托成果、底稿、检索报告及衍生成果归属。" },
+      { clause: "付款条款", likelihood: 71, note: "更关注分阶段付款、固定费用和超范围工作计费方式。" },
+      { clause: "争议解决", likelihood: 58, note: "通常会关注管辖地、仲裁条款及执行效率。" },
+      { clause: "保密条款", likelihood: 22, note: "会对客户技术信息、专利方案和未公开资料做重点保护。" },
+      { clause: "交付标准", likelihood: 18, note: "更关注成果形式、文件版本和审查意见响应时限。" },
     ],
     preEmptiveStrategies: [
-      "Provide a one-page ACTA plain-English explainer with the draft",
-      "Include itemized budget breakdown in initial draft to prevent payment disputes",
-      "Offer local jurisdiction as a concession early — it costs nothing and saves a round",
-      "Send subject injury ACTA language with explicit annotation explaining coverage scope",
+      "提前列明服务内容和交付物，避免后续争议",
+      "明确阶段费用、超范围费用和付款节点",
+      "把保密范围和成果归属写得足够具体",
+      "对争议解决和管辖安排提前定稿，减少来回沟通",
     ],
   },
   {
-    id: "university", name: "University Research Center", shortName: "University",
+    id: "contracting", name: "工程造价 / 总包合同方", shortName: "工程造价",
     color: "#5d8a90", bg: "rgba(93,138,144,0.06)", border: "rgba(93,138,144,0.2)",
-    description: "Stand-alone research institutes affiliated with universities. Moderate IP sophistication. Publication rights important but often more flexible than AMCs.",
-    avgDaysToClose: 65, negotiationStyle: "Collaborative — willing to use ACTA as anchor",
+    description: "工程造价、总包与项目管理类客户，通常会关注合同价款、变更签证、工期顺延、结算方式和索赔边界。",
+    avgDaysToClose: 65, negotiationStyle: "协同型 — 以项目推进为导向",
     tendencies: [
-      { clause: "Intellectual Property", likelihood: 67, note: "Will push for joint ownership on derivative discoveries. More flexible than AMCs on licensing." },
-      { clause: "Confidentiality", likelihood: 61, note: "Academic disclosure exceptions are important. Will push for peer review submission carve-outs." },
-      { clause: "Termination", likelihood: 55, note: "Concerned about mid-trial termination and enrolled patient obligations." },
-      { clause: "Publication Rights", likelihood: 48, note: "Important but more negotiable — often accept 45-60 day review." },
-      { clause: "Indemnification", likelihood: 38, note: "Generally accepts ACTA mutual negligence standard." },
+      { clause: "价款调整", likelihood: 67, note: "会重点关注变更、签证、暂估价和材料价差调整机制。" },
+      { clause: "保密条款", likelihood: 61, note: "会要求对造价数据、报价文件和结算资料进行保密。" },
+      { clause: "工期顺延", likelihood: 55, note: "对不可抗力、甲方原因和设计变更导致的顺延很敏感。" },
+      { clause: "成果交付", likelihood: 48, note: "更关注节点成果、复核时限和提交格式。" },
+      { clause: "责任限制", likelihood: 38, note: "通常接受较为标准的责任分配，但会核查上限是否合理。" },
     ],
     preEmptiveStrategies: [
-      "Offer joint publication authorship acknowledgment — low cost, high goodwill",
-      "Include explicit termination wind-down language for enrolled patients upfront",
-      "Add academic disclosure carve-out to confidentiality clause proactively",
-      "Propose licensing revenue share on derivative IP to close IP disputes faster",
+      "把变更、签证、结算与工期顺延规则提前写清",
+      "对价款调整机制预设公式或触发条件",
+      "把成果提交与审核时限写成可执行条款",
+      "把责任上限和索赔边界标准化，减少谈判轮次",
     ],
   },
   {
-    id: "private", name: "Private Research Site", shortName: "Private Site",
+    id: "legal", name: "企业法务 / 外部律师", shortName: "法务",
     color: "#6a9e78", bg: "rgba(106,158,120,0.06)", border: "rgba(106,158,120,0.2)",
-    description: "For-profit CROs and dedicated trial sites. Most ACTA-familiar. Fastest to close. Primary concern is payment terms and overhead.",
-    avgDaysToClose: 28, negotiationStyle: "Transactional — efficiency-driven",
+    description: "企业法务或外部律师团队，通常会从风险控制、履约边界、违约责任、争议解决和可执行性角度审阅合同。",
+    avgDaysToClose: 28, negotiationStyle: "效率型 — 关注可执行性",
     tendencies: [
-      { clause: "Payment Terms", likelihood: 79, note: "Will negotiate hard on per-patient fees. Net-15 preferred over Net-30. Watch screen failure reimbursement." },
-      { clause: "Termination", likelihood: 64, note: "Will require termination-for-convenience payment coverage for incurred costs." },
-      { clause: "Intellectual Property", likelihood: 12, note: "Private sites rarely contest IP — they operate as service providers." },
-      { clause: "Publication Rights", likelihood: 8, note: "Almost never contested — CROs don't have academic publishing incentives." },
-      { clause: "Indemnification", likelihood: 31, note: "Generally accepts ACTA standard but will review carefully." },
+      { clause: "付款条款", likelihood: 79, note: "会重点关注付款周期、发票要求、滞纳金和付款保障。" },
+      { clause: "解除条款", likelihood: 64, note: "会确认提前解除、违约解除以及通知期安排。" },
+      { clause: "知识产权归属", likelihood: 12, note: "通常会按业务场景确认成果归属和许可边界。" },
+      { clause: "保密条款", likelihood: 8, note: "重点在于商业秘密、技术资料和例外披露情形。" },
+      { clause: "责任限制", likelihood: 31, note: "会审查赔偿范围、责任上限和间接损失排除。" },
     ],
     preEmptiveStrategies: [
-      "Offer Net-20 payment terms as a concession from Net-30 to accelerate closure",
-      "Include explicit screen failure reimbursement schedule in initial budget",
-      "Add termination-for-convenience payment clause covering incurred costs",
-      "Front-load payment schedule — private sites value cash flow predictability",
+      "把付款、解除、赔偿和争议解决条款优先定稿",
+      "尽量把风险边界和责任上限写得清晰可执行",
+      "把关键定义前置，减少解释空间",
+      "保留标准化模板，方便快速出稿和复核",
     ],
   },
 ];
@@ -198,9 +198,9 @@ export default function SitePersona({ clauses }: Props) {
       `}</style>
 
       <div className="persona-intro">
-        <div className="persona-intro-title">Predictive site negotiation intelligence</div>
+        <div className="persona-intro-title">项目角色画像与谈判偏好</div>
         <div className="persona-intro-sub">
-          Select the site type you are negotiating with — AI predicts which clauses will cause friction before you send.
+          选择你的合作对象类型，系统会提前预测哪些条款更容易产生分歧，帮助你更快完成合同审查与修改。
         </div>
       </div>
 
@@ -221,7 +221,7 @@ export default function SitePersona({ clauses }: Props) {
             <div className="persona-card-short">{p.shortName}</div>
             <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginBottom: 4 }}>
               <span className="persona-days-num" style={{ color: p.color }}>{p.avgDaysToClose}</span>
-              <span className="persona-days-label">avg days to close</span>
+              <span className="persona-days-label">平均完成周期</span>
             </div>
             <div className="persona-style">{p.negotiationStyle}</div>
           </div>
@@ -235,7 +235,7 @@ export default function SitePersona({ clauses }: Props) {
 
           {criticalClauses.length > 0 && (
             <div style={{ marginBottom: 20 }}>
-              <div className="friction-label">Overlap with your critical clauses</div>
+              <div className="friction-label">与关键条款的重合风险</div>
               {criticalClauses.map(([name]) => {
                 const risk = getClauseRisk(name, selectedPersona);
                 if (!risk) return null;
@@ -243,8 +243,8 @@ export default function SitePersona({ clauses }: Props) {
                   <div className="overlap-alert" key={name}>
                     <div className="overlap-dot" />
                     <div>
-                      <strong style={{ color: "#2d3d38" }}>{name}</strong> — This site type pushes back on this clause {risk.likelihood}% of the time.
-                      Already flagged critical in your contract. High risk of multi-week delay.
+                      <strong style={{ color: "#2d3d38" }}>{name}</strong> — 这类合作对象对该条款的反馈概率约为 {risk.likelihood}%。
+                      该条款已在合同中标记为高风险，预计会带来较长的沟通周期。
                     </div>
                   </div>
                 );
@@ -252,7 +252,7 @@ export default function SitePersona({ clauses }: Props) {
             </div>
           )}
 
-          <div className="friction-label">Predicted clause friction probability</div>
+          <div className="friction-label">条款冲突概率预测</div>
           {selectedPersona.tendencies.map((t) => {
             const barColor = t.likelihood >= 75 ? "#b85450" : t.likelihood >= 50 ? "#c9974a" : "#6a9e78";
             return (
@@ -272,7 +272,7 @@ export default function SitePersona({ clauses }: Props) {
           })}
 
           <button className="strategy-toggle" onClick={() => setShowStrategies(!showStrategies)}>
-            {showStrategies ? "Hide" : "Show"} pre-emptive strategies ({selectedPersona.preEmptiveStrategies.length})
+            {showStrategies ? "收起" : "展开"} 预置建议（{selectedPersona.preEmptiveStrategies.length}）
           </button>
 
           {showStrategies && (

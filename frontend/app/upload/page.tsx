@@ -11,8 +11,7 @@ export default function UploadPage() {
   const [error, setError] = useState<string | null>(null);
 
   const uploadFile = async () => {
-    if (!file) return;
-
+    if (!file || loading) return;
     setLoading(true);
     setError(null);
     setResult(null);
@@ -21,44 +20,38 @@ export default function UploadPage() {
       const { analysis } = await analyzeContractFile(file);
       setResult(analysis);
     } catch (err: any) {
-      console.error("Upload/Analyze error:", err);
-      setError(err.message || "Something went wrong");
+      console.error("上传/分析失败:", err);
+      setError(err?.message || "上传或分析过程中出现错误，请稍后重试。");
     } finally {
       setLoading(false);
     }
   };
 
-  // =========================
-  // WINNING FEATURE: RISK SCORE
-  // =========================
   const riskScore =
     result?.metrics?.critical >= 3
       ? 90
       : result?.metrics?.critical >= 1
-      ? 70
-      : 30;
+        ? 70
+        : 30;
 
   return (
-    <div style={{ padding: 40, maxWidth: 900, margin: "0 auto" }}>
-      
-      {/* HEADER */}
+    <div style={{ padding: 40, maxWidth: 960, margin: "0 auto" }}>
       <h1 style={{ fontSize: 30, fontWeight: 800 }}>
-        ⚖️ ACTA AI — Contract Intelligence System
+        工程咨询合同智能分析
       </h1>
 
-      <p style={{ color: "#666", marginTop: 5 }}>
-        Upload a Clinical Trial Agreement and get AI-powered legal risk + redline analysis.
+      <p style={{ color: "#666", marginTop: 8, lineHeight: 1.8 }}>
+        上传工程咨询、工程造价、知识产权或专利相关合同，即可获得 AI 驱动的风险识别、条款分析与红线建议。
       </p>
 
-      {/* FILE INPUT */}
-      <div style={{ marginTop: 25 }}>
+      <div style={{ marginTop: 24 }}>
         <input
           type="file"
+          accept=".pdf,.docx,.txt"
           onChange={(e) => setFile(e.target.files?.[0] || null)}
         />
       </div>
 
-      {/* BUTTON */}
       <button
         onClick={uploadFile}
         disabled={!file || loading}
@@ -72,30 +65,25 @@ export default function UploadPage() {
           border: "none",
         }}
       >
-        {loading ? "🤖 AI Analyzing..." : "Upload & Analyze"}
+        {loading ? "正在分析…" : "上传并分析"}
       </button>
 
-      {/* LOADING STATE */}
       {loading && (
-        <div style={{ marginTop: 20, color: "#555" }}>
-          🧠 Reading clauses... <br />
-          ⚖️ Detecting legal risks... <br />
-          🔴 Generating redlines...
+        <div style={{ marginTop: 20, color: "#555", lineHeight: 1.9 }}>
+          正在读取合同文本… <br />
+          正在识别关键条款… <br />
+          正在生成风险与红线建议…
         </div>
       )}
 
-      {/* ERROR */}
       {error && (
-        <div style={{ marginTop: 20, color: "red" }}>
-          ❌ {error}
+        <div style={{ marginTop: 20, color: "red", lineHeight: 1.7 }}>
+          发生错误：{error}
         </div>
       )}
 
-      {/* RESULTS */}
       {result && (
         <div style={{ marginTop: 40 }}>
-
-          {/* RISK SCORE CARD (IMPORTANT FOR HACKATHON WIN) */}
           <div
             style={{
               background: "#111",
@@ -105,11 +93,10 @@ export default function UploadPage() {
               marginBottom: 20,
             }}
           >
-            <h3>⚠️ AI Risk Score</h3>
+            <h3>风险评分</h3>
             <h1 style={{ fontSize: 36 }}>{riskScore}/100</h1>
           </div>
 
-          {/* EXECUTIVE SUMMARY */}
           {result.summary && (
             <div
               style={{
@@ -120,32 +107,29 @@ export default function UploadPage() {
                 color: "white",
               }}
             >
-              <h2 style={{ marginBottom: 10 }}>🧠 Executive Summary</h2>
-              <p style={{ whiteSpace: "pre-wrap", color: "#cbd5e1" }}>
+              <h2 style={{ marginBottom: 10 }}>分析摘要</h2>
+              <p style={{ whiteSpace: "pre-wrap", color: "#cbd5e1", lineHeight: 1.8 }}>
                 {result.summary}
               </p>
             </div>
           )}
 
-          {/* METRICS */}
           <div style={{ marginTop: 20 }}>
-            <h3>📊 Metrics</h3>
-            <ul>
-              <li>Critical: {result.metrics?.critical}</li>
-              <li>Minor: {result.metrics?.minor}</li>
-              <li>Aligned: {result.metrics?.aligned}</li>
+            <h3>关键指标</h3>
+            <ul style={{ lineHeight: 1.9 }}>
+              <li>高风险条款：{result.metrics?.critical}</li>
+              <li>需关注条款：{result.metrics?.minor}</li>
+              <li>已对齐条款：{result.metrics?.aligned}</li>
             </ul>
           </div>
 
-          {/* REDLINES (CORE FEATURE) */}
-          <h2 style={{ marginTop: 30 }}>🔴 AI Redline Report</h2>
+          <h2 style={{ marginTop: 30 }}>红线建议</h2>
 
           {result.clauses ? (
             <RedlineViewer redlines={result.clauses} />
           ) : (
-            <p>No redlines generated</p>
+            <p>暂无红线建议</p>
           )}
-
         </div>
       )}
     </div>

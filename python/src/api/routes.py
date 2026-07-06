@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import APIRouter, File, Form, Request, UploadFile
-from fastapi import HTTPException
+from fastapi import APIRouter, File, Form, Request, UploadFile, HTTPException
+from fastapi.responses import Response
 
 from src.api.limiter import limiter
 
@@ -19,6 +19,7 @@ from src.api.schemas import (
 from src.config import get_settings
 from src.parsers.document_parser import parse_document
 from src.services.chat import answer_chat
+from src.services.pdf_export import build_analysis_pdf
 from src.services.review import run_inline_review, run_uploaded_contract_review
 from src.services.rewrite import rewrite_to_acta
 
@@ -87,6 +88,19 @@ async def create_review(request: ReviewRequest) -> AnalyzeResponse:
 @router.post("/api/acta-rewrite", response_model=ActaRewriteResponse)
 async def acta_rewrite(request: ActaRewriteRequest) -> ActaRewriteResponse:
     return rewrite_to_acta(request)
+
+
+@router.post("/api/v1/export/pdf")
+async def export_pdf(request: ReviewRequest) -> Response:
+    result = await run_inline_review(
+        AnalyzeRequest(title=request.title, filename=request.filename, text=request.text.strip())
+    )
+    pdf_bytes = build_analysis_pdf(result, filename=request.filename or request.title)
+    safe_name = Path(request.filename or request.title or "analysis").stem or "analysis"
+    headers = {
+        "Content-Disposition": f'attachment; filename="{safe_name}.pdf"; filename*=UTF-8\'\'{safe_name}.pdf'
+    }
+    return Response(content=pdf_bytes, media_type="application/pdf", headers=headers)
 
 
 @router.post("/api/chat", response_model=ChatResponse)

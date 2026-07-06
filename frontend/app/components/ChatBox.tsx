@@ -17,7 +17,7 @@ export default function ChatBox({ context }: Props) {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "ai",
-      text: "I've analyzed your Clinical Trial Agreement. Ask me about any clause, risk area, or ACTA compliance question — I'll give you precise legal guidance.",
+      text: "我已经完成合同分析。你可以随时问我任何条款、风险点或合规问题，我会给你清晰的建议。",
       ts: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     },
   ]);
@@ -43,13 +43,13 @@ export default function ChatBox({ context }: Props) {
       const data = await chatWithContract(question, context);
       setMessages((prev) => [...prev, {
         role: "ai",
-        text: data.answer || "No response received.",
+        text: data.answer || "未收到回复。",
         ts: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       }]);
     } catch {
       setMessages((prev) => [...prev, {
         role: "ai",
-        text: "Connection error. Please check your backend.",
+        text: "连接错误，请检查后端服务是否已启动。",
         ts: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       }]);
     } finally {
@@ -58,10 +58,10 @@ export default function ChatBox({ context }: Props) {
   };
 
   const suggestions = [
-    "Explain the indemnification clause",
-    "Is our IP ownership ACTA-compliant?",
-    "What's the publication rights risk?",
-    "Summarize the critical issues",
+    "解释赔偿条款",
+    "我们的知识产权归属是否合理？",
+    "成果发表条款的风险是什么？",
+    "总结关键风险点",
   ];
 
   return (
@@ -239,11 +239,11 @@ export default function ChatBox({ context }: Props) {
           className="chat-input"
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
-          placeholder="Ask about clauses, risks, or ACTA compliance…"
+          placeholder="请输入条款、风险或合同审查问题…"
           onKeyDown={(e) => e.key === "Enter" && sendMessage()}
         />
         <button className="chat-send-btn" onClick={sendMessage} disabled={loading || !question.trim()}>
-          Send →
+          发送 →
         </button>
       </div>
     </div>

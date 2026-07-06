@@ -14,7 +14,7 @@ interface Props {
   };
 }
 
-type Holder = "Sponsor (Regeneron)" | "Site Legal" | "IRB/Compliance" | "Pending Review";
+type Holder = "委托方（Regeneron）" | "法务部门" | "伦理/合规" | "待审阅";
 type Stage = "draft" | "sponsor-review" | "site-review" | "irb" | "executed";
 
 interface VersionEntry {
@@ -28,11 +28,11 @@ interface VersionEntry {
 }
 
 const STAGE_LABELS: Record<Stage, string> = {
-  "draft": "Draft",
-  "sponsor-review": "Sponsor Review",
-  "site-review": "Site Legal",
-  "irb": "IRB / Compliance",
-  "executed": "Executed",
+  "draft": "草案",
+  "sponsor-review": "委托方审阅",
+  "site-review": "服务方审阅",
+  "irb": "合规审查",
+  "executed": "签署完成",
 };
 
 const STAGE_ORDER: Stage[] = ["draft", "sponsor-review", "site-review", "irb", "executed"];
@@ -48,21 +48,21 @@ interface StageEstimate {
 
 function buildForecast(critical: number, minor: number): StageEstimate[] {
   return [
-    { stage: "draft", label: "Initial Draft", baseDays: 3, estimatedDays: 3, bottleneck: false },
-    { stage: "sponsor-review", label: "Sponsor Review", baseDays: 7, estimatedDays: Math.round(7 + critical * 4 + minor * 1.5), bottleneck: critical >= 2, bottleneckReason: critical >= 2 ? `${critical} critical clauses require senior legal escalation` : undefined },
-    { stage: "site-review", label: "Site Legal Review", baseDays: 21, estimatedDays: Math.round(21 + critical * 8 + minor * 3), bottleneck: critical >= 3, bottleneckReason: critical >= 3 ? "High critical count — expect 3+ redline rounds" : undefined },
-    { stage: "irb", label: "IRB / Compliance", baseDays: 14, estimatedDays: Math.round(14 + (critical > 0 ? 7 : 0)), bottleneck: false },
-    { stage: "executed", label: "Final Execution", baseDays: 3, estimatedDays: 3, bottleneck: false },
+    { stage: "draft", label: "起草", baseDays: 3, estimatedDays: 3, bottleneck: false },
+    { stage: "sponsor-review", label: "委托方审阅", baseDays: 7, estimatedDays: Math.round(7 + critical * 4 + minor * 1.5), bottleneck: critical >= 2, bottleneckReason: critical >= 2 ? `${critical} 个高风险条款需要上级法务介入` : undefined },
+    { stage: "site-review", label: "服务方审阅", baseDays: 21, estimatedDays: Math.round(21 + critical * 8 + minor * 3), bottleneck: critical >= 3, bottleneckReason: critical >= 3 ? "高风险条款较多，预计需要多轮修改" : undefined },
+    { stage: "irb", label: "合规审查", baseDays: 14, estimatedDays: Math.round(14 + (critical > 0 ? 7 : 0)), bottleneck: false },
+    { stage: "executed", label: "签署完成", baseDays: 3, estimatedDays: 3, bottleneck: false },
   ];
 }
 
 export default function WorkflowTracker({ filename, metrics }: Props) {
-  const today = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const today = new Date().toLocaleDateString("zh-CN", { year: "numeric", month: "long", day: "numeric" });
   const [versions, setVersions] = useState<VersionEntry[]>([{
     version: "v1.0", date: today, holder: "Sponsor (Regeneron)", stage: "draft",
-    note: "Initial upload — AI analysis complete", critical: metrics.critical, minor: metrics.minor,
+    note: "已上传，AI 分析完成", critical: metrics.critical, minor: metrics.minor,
   }]);
-  const [currentHolder, setCurrentHolder] = useState<Holder>("Sponsor (Regeneron)");
+  const [currentHolder, setCurrentHolder] = useState<Holder>("委托方（Regeneron）");
   const [note, setNote] = useState("");
   const [currentStage, setCurrentStage] = useState<Stage>("draft");
   const [showGantt, setShowGantt] = useState(true);
@@ -79,7 +79,7 @@ export default function WorkflowTracker({ filename, metrics }: Props) {
     setVersions((prev) => [...prev, {
       version: `v${(prev.length + 1).toFixed(1)}`,
       date: today, holder: currentHolder, stage: currentStage,
-      note: note || "Version updated", critical: metrics.critical, minor: metrics.minor,
+      note: note || "版本已更新", critical: metrics.critical, minor: metrics.minor,
     }]);
     setNote("");
   };
@@ -330,28 +330,28 @@ export default function WorkflowTracker({ filename, metrics }: Props) {
       {/* Impact cards */}
       <div className="wf-grid">
         <div className="wf-card">
-          <div className="wf-card-label">Forecast: Days to Close</div>
+          <div className="wf-card-label">预计关闭周期</div>
           <div className="wf-card-value" style={{ color: forecastColor }}>{totalEstimated} days</div>
-          <div className="wf-card-sub">AI-forecast based on clause risk profile</div>
+          <div className="wf-card-sub">基于条款风险画像的 AI 预测</div>
         </div>
         <div className="wf-card">
-          <div className="wf-card-label">NPV Unlocked vs. Avg</div>
+          <div className="wf-card-label">相较平均可节省价值</div>
           <div className="wf-card-value" style={{ color: "#6a9e78" }}>
             ${daysSaved > 0 ? `${(daysSaved * 0.8).toFixed(0)}M` : "0"}
           </div>
-          <div className="wf-card-sub">vs. 100-day industry average at $800K/day</div>
+          <div className="wf-card-sub">对比 100 天行业均值，按每日 80 万美元测算</div>
         </div>
         <div className="wf-card">
-          <div className="wf-card-label">Currently holds the pen</div>
+          <div className="wf-card-label">当前主导方</div>
           <div className="wf-card-value" style={{ fontSize: 15, marginTop: 4, color: "#2d3d38" }}>{currentHolder}</div>
-          <div className="wf-card-sub">Active negotiating party</div>
+          <div className="wf-card-sub">当前参与谈判的一方</div>
         </div>
         <div className="wf-card">
-          <div className="wf-card-label">Contract file</div>
+          <div className="wf-card-label">合同文件</div>
           <div className="wf-card-value" style={{ fontSize: 13, color: "#7a9088", marginTop: 4, wordBreak: "break-all", fontWeight: 400 }}>
             {filename}
           </div>
-          <div className="wf-card-sub">{versions.length} version(s) logged</div>
+          <div className="wf-card-sub">已记录 {versions.length} 个版本</div>
         </div>
       </div>
 
@@ -359,16 +359,16 @@ export default function WorkflowTracker({ filename, metrics }: Props) {
       <div className="gantt-section">
         <div className="gantt-header">
           <div className="gantt-title">
-            Time-to-close forecast
+            周期预测
             {bottleneckStages.length > 0 && (
-              <span className="bottleneck-pill">{bottleneckStages.length} bottleneck{bottleneckStages.length > 1 ? "s" : ""}</span>
+              <span className="bottleneck-pill">{bottleneckStages.length} 个瓶颈</span>
             )}
           </div>
           <div className="gantt-totals">
-            <span>Baseline: {totalBaseline}d</span>
-            <span style={{ color: forecastColor }}>Forecast: {totalEstimated}d</span>
+            <span>基线：{totalBaseline} 天</span>
+            <span style={{ color: forecastColor }}>预测：{totalEstimated} 天</span>
             <button className="gantt-toggle" onClick={() => setShowGantt(!showGantt)}>
-              {showGantt ? "Hide" : "Show"}
+              {showGantt ? "隐藏" : "显示"}
             </button>
           </div>
         </div>
@@ -386,7 +386,7 @@ export default function WorkflowTracker({ filename, metrics }: Props) {
                 <div className="gantt-row" key={s.stage}>
                   <div className="gantt-stage-name" style={{ color: isDone ? "#6a9e78" : stIdx === curIdx ? "#4a7a5a" : undefined }}>
                     {isDone ? "✓ " : ""}{s.label}
-                    {s.bottleneck && <span className="bottleneck-pill" style={{ marginLeft: 4 }}>bottleneck</span>}
+                    {s.bottleneck && <span className="bottleneck-pill" style={{ marginLeft: 4 }}>瓶颈</span>}
                   </div>
                   <div className="gantt-bar-wrap">
                     <div className="gantt-bar-ghost" style={{ width: `${basePct}%` }} />
@@ -400,7 +400,7 @@ export default function WorkflowTracker({ filename, metrics }: Props) {
             })}
             {bottleneckStages.length > 0 && (
               <div className="bottleneck-alert">
-                <div className="bottleneck-alert-title">Bottleneck forecast — these stages will cause delays</div>
+                <div className="bottleneck-alert-title">瓶颈预测 — 这些阶段可能导致延期</div>
                 <ul className="bottleneck-list">
                   {bottleneckStages.map(s => (
                     <li key={s.stage}><strong>{s.label}</strong>: {s.bottleneckReason} (+{s.estimatedDays - s.baseDays} days over baseline)</li>
@@ -413,7 +413,7 @@ export default function WorkflowTracker({ filename, metrics }: Props) {
       </div>
 
       {/* Stepper */}
-      <div className="section-label-sm">Negotiation stage</div>
+      <div className="section-label-sm">谈判阶段</div>
       <div className="stepper">
         {STAGE_ORDER.map((s, i) => {
           const isBottleneck = forecast.find(f => f.stage === s)?.bottleneck && i >= stageIdx;
@@ -429,10 +429,10 @@ export default function WorkflowTracker({ filename, metrics }: Props) {
 
       {/* Pen holder */}
       <div className="pen-section">
-        <div className="pen-title">Update negotiation status</div>
+        <div className="pen-title">更新谈判状态</div>
         <div className="pen-row">
           <div>
-            <div className="pen-label">Who holds the pen?</div>
+            <div className="pen-label">当前主导方</div>
             <select className="pen-select" value={currentHolder} onChange={(e) => setCurrentHolder(e.target.value as Holder)}>
               <option>Sponsor (Regeneron)</option>
               <option>Site Legal</option>
@@ -441,22 +441,22 @@ export default function WorkflowTracker({ filename, metrics }: Props) {
             </select>
           </div>
           <div>
-            <div className="pen-label">Current stage</div>
+            <div className="pen-label">当前阶段</div>
             <select className="pen-select" value={currentStage} onChange={(e) => setCurrentStage(e.target.value as Stage)}>
               {STAGE_ORDER.map((s) => <option key={s} value={s}>{STAGE_LABELS[s]}</option>)}
             </select>
           </div>
         </div>
         <div style={{ marginBottom: 10 }}>
-          <div className="pen-label">Note</div>
+          <div className="pen-label">备注</div>
           <input className="pen-input" value={note} onChange={(e) => setNote(e.target.value)}
             placeholder="e.g. Redlined indemnification clause, awaiting site feedback" />
         </div>
-        <button className="pen-btn" onClick={addVersion}>Log version</button>
+        <button className="pen-btn" onClick={addVersion}>记录版本</button>
       </div>
 
       {/* Version history */}
-      <div className="section-label-sm">Version history</div>
+      <div className="section-label-sm">版本历史</div>
       <div className="version-table">
         <div className="version-header">
           <span>Ver.</span><span>Note</span><span>Holder</span><span>Critical</span><span>Minor</span>

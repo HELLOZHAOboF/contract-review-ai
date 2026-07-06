@@ -6,8 +6,7 @@ import ChatBox from "@/app/components/ChatBox";
 import WorkflowTracker from "@/app/components/WorkflowTracker";
 import SitePersona from "@/app/components/SitePersona";
 import DocumentViewer from "@/app/components/DocumentViewer";
-import { analyzeContractFile, type AnalysisResult } from "@/lib/api";
-import jsPDF from "jspdf";
+import { analyzeCTA, analyzeContractFile, downloadAnalysisPdf, type AnalysisResult } from "@/lib/api";
 
 type Tab = "document" | "redlines" | "chat" | "workflow" | "personas";
 
@@ -51,6 +50,8 @@ export default function HomePage() {
   const [activeTab, setActiveTab]       = useState<Tab>("document");
   const [dragOver, setDragOver]         = useState(false);
   const [jumpClause, setJumpClause]     = useState<string | null>(null);
+  const [clarifyingAnswers, setClarifyingAnswers] = useState<Record<number, string>>({});
+  const [reanalysisLoading, setReanalysisLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const petals = usePetals(22);
 
@@ -71,19 +72,20 @@ export default function HomePage() {
       const { upload, analysis } = await analyzeContractFile(file);
       const fullText = upload.full_text || upload.text_preview || "";
       if (!fullText || fullText.trim().length < 20) {
-        throw new Error("Could not extract readable text from this file. Ensure it's a text-based PDF, DOCX, or TXT.");
+        throw new Error("无法从该文件中提取可读文本，请确认上传的是可解析的 PDF、DOCX 或 TXT 文件。");
       }
       setContractText(fullText);
       setResult({
         ...analysis,
         filename: upload.filename || analysis.filename,
       });
+      setClarifyingAnswers({});
       setActiveTab("document");
     } catch (err: any) {
       if (err.message?.includes("Failed to fetch")) {
-        setError("Cannot reach the backend server. Please ensure the Python API is running on port 8000.");
+        setError("无法连接后端服务，请确认 Python 接口服务已启动并运行在 8000 端口。");
       } else {
-        setError(err?.message || "Something went wrong. Please try again.");
+        setError(err?.message || "发生了错误，请稍后重试。");
       }
     } finally {
       setLoading(false);
@@ -96,35 +98,63 @@ export default function HomePage() {
     setTimeout(() => setJumpClause(null), 1200);
   }, []);
 
-  const downloadPDF = () => {
+  const answerClarifyingQuestion = useCallback((index: number, value: string) => {
+    setClarifyingAnswers((prev) => ({ ...prev, [index]: value }));
+  }, []);
+
+  const clarifyingQuestions = result?.clarifying_questions ?? [];
+
+  const runClarifyingReanalysis = useCallback(async () => {
+    if (!result || reanalysisLoading) return;
+
+    const questions = clarifyingQuestions.slice(0, 3);
+    const enrichedAnswers = questions
+      .map((question, index) => {
+        const answer = clarifyingAnswers[index]?.trim();
+        if (!answer) return null;
+        return `Q${index + 1} ${question}\nA${index + 1} ${answer}`;
+      })
+      .filter(Boolean) as string[];
+
+    if (enrichedAnswers.length === 0) {
+      setError("请先补充至少一条追问答案，再继续分析。");
+      return;
+    }
+
+    setReanalysisLoading(true);
+    setError(null);
+
+    try {
+      const context = [contractText, "", "【补充回答】", ...enrichedAnswers].join("\n").trim();
+      const rerun = await analyzeCTA(context, result.filename || file?.name || "inline.txt");
+      setResult({ ...rerun, filename: result.filename });
+      setActiveTab("workflow");
+    } catch (err: any) {
+      setError(err?.message || "补充分析失败，请稍后重试。");
+    } finally {
+      setReanalysisLoading(false);
+    }
+  }, [clarifyingAnswers, clarifyingQuestions, contractText, file?.name, reanalysisLoading, result]);
+
+  const downloadPDF = async () => {
     if (!result) return;
-    const doc = new jsPDF();
-    doc.setFontSize(20);
-    doc.text("ACTA AI — Legal Contract Report", 20, 25);
-    doc.setFontSize(10);
-    doc.text(`Generated: ${new Date().toLocaleString()}`, 20, 35);
-    doc.setFontSize(14);
-    doc.text("Risk Summary", 20, 50);
-    doc.setFontSize(11);
-    doc.text(`Risk Score: ${result?.metrics?.risk_score ?? 0} / 100`, 20, 60);
-    doc.text(`Risk Level: ${result?.metrics?.risk_level ?? "N/A"}`, 20, 68);
-    doc.text(`Critical Issues: ${result?.metrics?.critical ?? 0}`, 20, 76);
-    doc.text(`Minor Issues: ${result?.metrics?.minor ?? 0}`, 20, 84);
-    doc.text(`Aligned Clauses: ${result?.metrics?.aligned ?? 0}`, 20, 92);
-    doc.text(`Recommendation: ${result?.metrics?.recommendation ?? ""}`, 20, 103, { maxWidth: 170 });
-    let y = 120;
-    doc.setFontSize(14);
-    doc.text("Clause Analysis", 20, y); y += 12;
-    doc.setFontSize(10);
-    Object.entries(result.clauses ?? {}).forEach(([name, clause]: any) => {
-      if (y > 270) { doc.addPage(); y = 20; }
-      doc.setFont("helvetica", "bold");
-      doc.text(`${name} [${clause.deviation?.toUpperCase()}]`, 20, y, { maxWidth: 170 }); y += 7;
-      doc.setFont("helvetica", "normal");
-      if (clause.risk_reason) { doc.text(clause.risk_reason, 20, y, { maxWidth: 170 }); y += 10; }
-      y += 3;
-    });
-    doc.save("ACTA_AI_Report.pdf");
+
+    try {
+      const blob = await downloadAnalysisPdf(
+        contractText || JSON.stringify(result.clauses ?? {}),
+        result.filename || file?.name || "analysis",
+      );
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `${(result.filename || file?.name || "analysis").replace(/\.[^.]+$/, "")}.pdf`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (err: any) {
+      setError(err?.message || "PDF 导出失败，请稍后重试。");
+    }
   };
 
   const critical  = result?.metrics?.critical  ?? 0;
@@ -538,14 +568,14 @@ export default function HomePage() {
               <path d="M10 3v14M6 7l4-4 4 4M4 11h12M7 15l3 3 3-3" />
             </svg>
           </div>
-          ACTA AI
-          <span className="logo-sub">Clinical Trial Intelligence</span>
+          工程咨询 AI
+          <span className="logo-sub">合同智能审查平台</span>
         </div>
       </header>
 
       {/* ── SIDEBAR ── */}
       <aside className="sidebar">
-        <div className="section-label">Upload Contract</div>
+        <div className="section-label">上传合同</div>
 
         <div
           className={`drop-zone ${dragOver ? "active" : ""}`}
@@ -563,7 +593,7 @@ export default function HomePage() {
               <path d="M4 14v3h12v-3M10 3v10M7 6l3-3 3 3" />
             </svg>
           </div>
-          <div className="drop-zone-title">Drop CTA file here</div>
+          <div className="drop-zone-title">拖拽合同文件到这里</div>
           <div className="drop-zone-sub">PDF · DOCX · TXT</div>
           <input ref={fileInputRef} type="file" accept=".pdf,.docx,.txt" hidden
             onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
@@ -588,14 +618,14 @@ export default function HomePage() {
           {loading ? (
             <>
               <span style={{ width: 13, height: 13, border: "1.5px solid rgba(255,255,255,0.25)", borderTopColor: "white", borderRadius: "50%", animation: "spin 0.9s linear infinite", display: "inline-block", flexShrink: 0 }} />
-              Analyzing…
+              分析中…
             </>
           ) : (
             <>
               <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round">
                 <circle cx="8" cy="8" r="6" /><path d="M5.5 8l2 2 3-3" />
               </svg>
-              Analyze Contract
+              开始分析
             </>
           )}
         </button>
@@ -604,35 +634,35 @@ export default function HomePage() {
           <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
             <path d="M4 14v1h8v-1M8 2v9M5 8l3 3 3-3" />
           </svg>
-          Download PDF Report
+          下载 PDF 报告
         </button>
 
         {result && (
           <>
-            <div className="section-label" style={{ marginTop: 18 }}>Risk Score</div>
+            <div className="section-label" style={{ marginTop: 18 }}>风险评分</div>
             <div className="risk-card">
               <div className="risk-score-big" style={{ color: riskColor }}>{riskScore}</div>
-              <div className="risk-label-text">/ 100 · {riskLevel} Risk</div>
+              <div className="risk-label-text">/ 100 · {riskLevel} 风险</div>
               <div className="risk-bar-wrap">
                 <div className="risk-bar-fill" style={{ width: `${riskScore}%`, background: riskColor }} />
               </div>
             </div>
 
-            <div className="section-label" style={{ marginTop: 12 }}>Breakdown</div>
+            <div className="section-label" style={{ marginTop: 12 }}>风险分布</div>
             <div className="metric-row">
-              <div className="metric-label"><div className="metric-dot" style={{ background: "var(--critical)" }} />Critical</div>
+              <div className="metric-label"><div className="metric-dot" style={{ background: "var(--critical)" }} />高风险</div>
               <div className="metric-val" style={{ color: "var(--critical)" }}>{critical}</div>
             </div>
             <div className="metric-row">
-              <div className="metric-label"><div className="metric-dot" style={{ background: "var(--minor)" }} />Minor</div>
+              <div className="metric-label"><div className="metric-dot" style={{ background: "var(--minor)" }} />需关注</div>
               <div className="metric-val" style={{ color: "var(--minor)" }}>{minor}</div>
             </div>
             <div className="metric-row">
-              <div className="metric-label"><div className="metric-dot" style={{ background: "var(--aligned)" }} />Aligned</div>
+              <div className="metric-label"><div className="metric-dot" style={{ background: "var(--aligned)" }} />已对齐</div>
               <div className="metric-val" style={{ color: "var(--aligned)" }}>{aligned}</div>
             </div>
             <div className="metric-row">
-              <div className="metric-label" style={{ color: "var(--muted)" }}>Total</div>
+              <div className="metric-label" style={{ color: "var(--muted)" }}>总计</div>
               <div className="metric-val">{total}</div>
             </div>
           </>
@@ -647,18 +677,17 @@ export default function HomePage() {
           <div className="hero">
             <div className="hero-eyebrow">
               <div className="hero-eyebrow-dot" />
-              ACTA Compliance Platform
+              工程咨询合同智能审查平台
             </div>
             <h1 className="hero-title">
-              Clinical trial contracts,<br /><strong>analyzed instantly</strong>
+              工程咨询与专业服务合同，<br /><strong>一键完成分析</strong>
             </h1>
             <div className="hero-divider" />
             <p className="hero-sub">
-              Upload a Clinical Trial Agreement for AI-powered ACTA compliance analysis,
-              automated redlines, and multi-contract conflict detection.
+              上传工程咨询、造价、知识产权或专利类合同，即可获得 AI 驱动的合规审查、自动红线建议和条款风险分析。
             </p>
             <div className="hero-features">
-              {["ACTA Compliance", "Document Viewer", "Auto Redlines", "Site Personas", "Workflow Forecast"].map(f => (
+              {["合同合规", "文档查看", "自动红线", "角色画像", "流程预测"].map(f => (
                 <span key={f} className="hero-feature">
                   <span className="hero-feature-dot" />{f}
                 </span>
@@ -675,9 +704,9 @@ export default function HomePage() {
               <div className="loading-dot" />
             </div>
             <div className="loading-steps">
-              <div className="loading-step">Parsing document structure…</div>
-              <div className="loading-step">Comparing against ACTA baseline…</div>
-              <div className="loading-step">Generating redlines and predictions…</div>
+              <div className="loading-step">正在解析文档结构…</div>
+              <div className="loading-step">正在比对合同基线…</div>
+              <div className="loading-step">正在生成红线建议与预测…</div>
             </div>
           </div>
         )}
@@ -685,7 +714,7 @@ export default function HomePage() {
         {/* Error */}
         {error && (
           <div className="error-box">
-            <strong>⚠ Error</strong>
+            <strong>⚠ 错误</strong>
             {error}
           </div>
         )}
@@ -695,19 +724,19 @@ export default function HomePage() {
           <>
             <div className="tab-bar">
               <button className={`tab-btn ${activeTab === "document" ? "active" : ""}`} onClick={() => setActiveTab("document")}>
-                Document <span className="tab-chip chip-doc">Highlighted</span>
+                文档 <span className="tab-chip chip-doc">高亮</span>
               </button>
               <button className={`tab-btn ${activeTab === "redlines" ? "active" : ""}`} onClick={() => setActiveTab("redlines")}>
-                Redlines
+                红线建议
                 {critical > 0 && <span className="tab-chip chip-critical">{critical}</span>}
                 {minor    > 0 && <span className="tab-chip chip-minor">{minor}</span>}
               </button>
-              <button className={`tab-btn ${activeTab === "chat" ? "active" : ""}`} onClick={() => setActiveTab("chat")}>AI Chat</button>
+              <button className={`tab-btn ${activeTab === "chat" ? "active" : ""}`} onClick={() => setActiveTab("chat")}>AI 问答</button>
               <button className={`tab-btn ${activeTab === "workflow" ? "active" : ""}`} onClick={() => setActiveTab("workflow")}>
-                Workflow <span className="tab-chip chip-ok">Forecast</span>
+                审查流程 <span className="tab-chip chip-ok">预测</span>
               </button>
               <button className={`tab-btn ${activeTab === "personas" ? "active" : ""}`} onClick={() => setActiveTab("personas")}>
-                Site Personas <span className="tab-chip chip-teal">Predictive</span>
+                角色画像 <span className="tab-chip chip-teal">预测</span>
               </button>
             </div>
 
@@ -723,18 +752,84 @@ export default function HomePage() {
                   <>
                     <div className="rec-banner">
                       <div className="rec-text">
-                        <strong>Recommendation: </strong>{result?.metrics?.recommendation}
+                        <strong>建议： </strong>{result?.metrics?.recommendation}
                       </div>
-                      <div className="rec-count">{total} clauses analyzed</div>
+                      <div className="rec-count">共分析 {total} 条条款</div>
                     </div>
                     <RedlineViewer redlines={result.clauses ?? {}} jumpToClause={jumpClause} />
                   </>
                 )}
                 {activeTab === "chat" && (
-                  <ChatBox context={contractText || JSON.stringify(result.clauses ?? {})} />
+                  <>
+                    {clarifyingQuestions.length > 0 && (
+                      <div className="rec-banner" style={{ marginBottom: 18, flexDirection: "column" }}>
+                        <div className="rec-text">
+                          <strong>建议先补充：</strong>{clarifyingQuestions.join("；")}
+                        </div>
+                        <div style={{ display: "grid", gap: 10, width: "100%", marginTop: 6 }}>
+                          {clarifyingQuestions.map((question, index) => (
+                            <textarea
+                              key={question}
+                              value={clarifyingAnswers[index] || ""}
+                              onChange={(e) => answerClarifyingQuestion(index, e.target.value)}
+                              placeholder={`回答第 ${index + 1} 个问题`}
+                              rows={2}
+                              style={{
+                                width: "100%",
+                                borderRadius: 10,
+                                border: "1px solid var(--border-hover)",
+                                padding: "10px 12px",
+                                background: "rgba(250,250,244,0.8)",
+                                color: "var(--text)",
+                                fontFamily: "var(--font)",
+                                resize: "vertical",
+                              }}
+                            />
+                          ))}
+                        </div>
+                        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 4 }}>
+                          <button className="btn-primary" style={{ width: "auto", minWidth: 160 }} onClick={runClarifyingReanalysis} disabled={reanalysisLoading}>
+                            {reanalysisLoading ? "重新分析中…" : "基于回答重新分析"}
+                          </button>
+                          <div className="rec-count">系统已识别到关键信息缺口</div>
+                        </div>
+                      </div>
+                    )}
+                    <ChatBox context={contractText || JSON.stringify(result.clauses ?? {})} />
+                  </>
                 )}
                 {activeTab === "workflow" && (
-                  <WorkflowTracker filename={result.filename} metrics={result.metrics} />
+                  <>
+                    {clarifyingQuestions.length > 0 && (
+                      <div className="rec-banner" style={{ marginBottom: 18, flexDirection: "column" }}>
+                        <div className="rec-text">
+                          <strong>补充追问：</strong>{clarifyingQuestions[0]}
+                        </div>
+                        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
+                          <input
+                            value={clarifyingAnswers[0] || ""}
+                            onChange={(e) => answerClarifyingQuestion(0, e.target.value)}
+                            placeholder="填写第一条追问答案"
+                            style={{
+                              flex: 1,
+                              minWidth: 220,
+                              borderRadius: 10,
+                              border: "1px solid var(--border-hover)",
+                              padding: "10px 12px",
+                              background: "rgba(250,250,244,0.8)",
+                              color: "var(--text)",
+                              fontFamily: "var(--font)",
+                            }}
+                          />
+                          <button className="btn-primary" style={{ width: "auto", minWidth: 160 }} onClick={runClarifyingReanalysis} disabled={reanalysisLoading}>
+                            {reanalysisLoading ? "重新分析中…" : "重新审查"}
+                          </button>
+                        </div>
+                        <div className="rec-count">可先补充关键信息再继续审查</div>
+                      </div>
+                    )}
+                    <WorkflowTracker filename={result.filename} metrics={result.metrics} />
+                  </>
                 )}
                 {activeTab === "personas" && (
                   <SitePersona clauses={result.clauses ?? {}} />

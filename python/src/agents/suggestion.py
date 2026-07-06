@@ -43,9 +43,9 @@ Rules:
 
 PRIORITY_ORDER = {"high": 0, "medium": 1, "low": 2}
 RISK_TO_PRIORITY = {
-    RiskLevel.RED: "high",
-    RiskLevel.YELLOW: "medium",
-    RiskLevel.GREEN: "low",
+    RiskLevel.CRITICAL: "high",
+    RiskLevel.MEDIUM: "medium",
+    RiskLevel.LOW: "low",
 }
 
 
@@ -158,7 +158,7 @@ class SuggestionAgent:
         context_parts: list[str] = []
 
         for finding in risk_findings:
-            if finding.risk_level is RiskLevel.GREEN:
+            if finding.risk_level is RiskLevel.LOW:
                 continue
             context_parts.append(
                 "\n".join(
@@ -198,7 +198,7 @@ class SuggestionAgent:
         seen_clause_ids: set[str] = set()
 
         for finding in risk_findings:
-            if finding.risk_level is RiskLevel.GREEN or finding.needs_human_review:
+            if finding.risk_level is RiskLevel.LOW or finding.needs_human_review:
                 continue
 
             baseline = build_suggestion_for_finding(finding)
@@ -322,8 +322,8 @@ class SuggestionAgent:
         counts = Counter(finding.risk_level for finding in state.risk_findings)
         return (
             f"Reviewed {len(state.risk_findings)} clauses. "
-            f"Detected {counts[RiskLevel.RED]} critical, {counts[RiskLevel.YELLOW]} minor, "
-            f"and {counts[RiskLevel.GREEN]} aligned clauses."
+            f"Detected {counts[RiskLevel.CRITICAL]} critical, {counts[RiskLevel.MEDIUM]} minor, "
+            f"and {counts[RiskLevel.LOW]} aligned clauses."
         )
 
     def _normalize_priority(self, value: object) -> str:

@@ -15,7 +15,7 @@ export default function UploadZone() {
       setResult(analysis);
     } catch (err) {
       console.error(err);
-      alert("Upload failed");
+      alert("上传失败");
     }
 
     setLoading(false);
@@ -49,15 +49,15 @@ export default function UploadZone() {
         />
 
         <label htmlFor="fileInput" style={{ cursor: "pointer" }}>
-          Drag & Drop CTA file here or click to upload
+          拖拽 CTA 文件到这里，或点击上传
         </label>
       </div>
 
-      {loading && <p style={{ marginTop: 20 }}>Analyzing CTA...</p>}
+      {loading && <p style={{ marginTop: 20 }}>正在分析 CTA...</p>}
 
       {result && (
         <div style={{ marginTop: 20 }}>
-          <h3>Analysis Result</h3>
+          <h3>分析结果</h3>
           <pre>{JSON.stringify(result, null, 2)}</pre>
         </div>
       )}

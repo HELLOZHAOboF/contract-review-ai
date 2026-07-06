@@ -1,7 +1,9 @@
-const BASE = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+const BASE = (process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
 
 type Deviation = "critical" | "minor" | "aligned";
 type RiskLevel = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+
+type BackendRiskLevel = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL" | "red" | "yellow" | "green";
 
 interface BackendUploadResponse {
   filename: string;
@@ -13,7 +15,7 @@ interface BackendUploadResponse {
 interface BackendAssessmentPayload {
   clause_type: string;
   raw_text: string;
-  risk_level: string;
+  risk_level: BackendRiskLevel;
   deviation_summary: string;
   suggested_action: string;
   confidence: number;
@@ -48,6 +50,7 @@ interface BackendAnalyzeResponse {
   clauses: BackendClausePayload[];
   suggestions: BackendSuggestionPayload[];
   missing_clause_types: string[];
+  clarifying_questions?: string[];
   extraction_model?: string | null;
   version_diff: string;
   risk_score: number;
@@ -103,29 +106,30 @@ export interface AnalysisResult {
   metrics: AnalysisMetrics;
   redlines: RedlineItem[];
   missing_clause_types: string[];
+  clarifying_questions: string[];
   version_diff: string;
   extraction_model: string;
 }
 
 async function getErrorMessage(response: Response): Promise<string> {
-  const fallback = `Request failed (${response.status})`;
+  const fallback = `请求失败（${response.status}）`;
   try {
-    const payload = (await response.json()) as { detail?: string };
-    return payload.detail || fallback;
+    const payload = (await response.json()) as { detail?: string; message?: string };
+    return payload.detail || payload.message || fallback;
   } catch {
     return fallback;
   }
 }
 
-function toDeviation(riskLevel: string): Deviation {
-  switch (riskLevel.toLowerCase()) {
-    case "red":
-      return "critical";
-    case "yellow":
-      return "minor";
-    default:
-      return "aligned";
+function toDeviation(riskLevel: BackendRiskLevel): Deviation {
+  const normalized = riskLevel.trim().toLowerCase();
+  if (["red", "critical", "high", "severe", "danger"].includes(normalized)) {
+    return "critical";
   }
+  if (["yellow", "medium", "minor", "moderate", "warning"].includes(normalized)) {
+    return "minor";
+  }
+  return "aligned";
 }
 
 function toRiskLevel(score: number, critical: number, minor: number): RiskLevel {
@@ -143,21 +147,39 @@ function toRiskLevel(score: number, critical: number, minor: number): RiskLevel 
 
 function toRecommendation(critical: number, minor: number, missingClauseTypes: string[]): string {
   if (critical > 0) {
-    return "Address the critical clauses before routing this CTA for signature.";
+    return "建议优先处理高风险条款，再进入签署流程。";
   }
   if (missingClauseTypes.length > 0) {
-    return `Add the missing ${missingClauseTypes.length === 1 ? "clause" : "clauses"} before final review.`;
+    return `建议补充缺失的${missingClauseTypes.length === 1 ? "条款" : "条款项"}后再进行最终复核。`;
   }
   if (minor > 0) {
-    return "Resolve the yellow-flagged clauses to align the agreement with the ACTA baseline.";
+    return "建议对需关注条款做进一步微调，以贴合当前合同基线。";
   }
-  return "The agreement is largely aligned with the ACTA baseline.";
+  return "整体条款与当前合同基线基本一致。";
+}
+
+const CLAUSE_TYPE_LABELS: Record<string, string> = {
+  "Confidentiality": "保密条款",
+  "Indemnification": "赔偿责任",
+  "Payment Terms": "付款条款",
+  "Intellectual Property": "知识产权",
+  "Publication Rights": "成果发表",
+  "Termination": "解除条款",
+  "Governing Law": "准据法",
+  "Subject Injury": "责任范围",
+  "Protocol Deviations": "履约偏差",
+  "General Clause": "通用条款",
+};
+
+function localizeClauseType(clauseType: string): string {
+  return CLAUSE_TYPE_LABELS[clauseType] || clauseType;
 }
 
 function createClauseKey(clauseType: string, seen: Map<string, number>): string {
-  const nextCount = (seen.get(clauseType) || 0) + 1;
-  seen.set(clauseType, nextCount);
-  return nextCount === 1 ? clauseType : `${clauseType} (${nextCount})`;
+  const label = localizeClauseType(clauseType);
+  const nextCount = (seen.get(label) || 0) + 1;
+  seen.set(label, nextCount);
+  return nextCount === 1 ? label : `${label} (${nextCount})`;
 }
 
 function priorityToNumber(priority: string): number {
@@ -214,7 +236,7 @@ function normalizeAnalysisResponse(payload: BackendAnalyzeResponse, filename: st
     clause: key,
     type: clause.type,
     severity: clause.deviation,
-    action: clause.deviation === "aligned" ? "Keep as drafted" : "Revise to ACTA baseline",
+    action: clause.deviation === "aligned" ? "保持现状" : "调整为合同基线",
     priority: clause.deviation === "critical" ? 1 : clause.deviation === "minor" ? 2 : 3,
     original_text: clause.text,
     suggested_text: clause.suggested_clause,
@@ -251,6 +273,7 @@ function normalizeAnalysisResponse(payload: BackendAnalyzeResponse, filename: st
     },
     redlines,
     missing_clause_types: payload.missing_clause_types,
+    clarifying_questions: payload.clarifying_questions || [],
     version_diff: payload.version_diff,
     extraction_model: payload.extraction_model || "python-review-pipeline",
   };
@@ -308,7 +331,25 @@ export async function analyzeContractFile(file: File): Promise<{
   analysis: AnalysisResult;
 }> {
   const upload = await uploadFile(file);
-  const analysis = await analyzeCTA(upload.full_text, upload.filename || file.name);
+
+  const form = new FormData();
+  form.append("title", upload.filename || file.name);
+  form.append("file", file);
+
+  const response = await fetch(`${BASE}/api/analyze`, {
+    method: "POST",
+    body: form,
+  });
+
+  if (!response.ok) {
+    throw new Error(await getErrorMessage(response));
+  }
+
+  const analysis = normalizeAnalysisResponse(
+    (await response.json()) as BackendAnalyzeResponse,
+    upload.filename || file.name,
+  );
+
   return { upload, analysis };
 }
 
@@ -373,6 +414,29 @@ export async function rewriteACTA(
 
   const payload = (await response.json()) as { rewrites: Record<string, string> };
   return payload.rewrites;
+}
+
+export async function downloadAnalysisPdf(text: string, filename: string): Promise<Blob> {
+  const response = await fetch(`${BASE}/api/v1/export/pdf`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      title: filename,
+      filename,
+      text,
+    }),
+  });
+
+  if (!response.ok) {
+    const message = await getErrorMessage(response);
+    const error = new Error(message);
+    (error as Error & { status?: number }).status = response.status;
+    throw error;
+  }
+
+  return await response.blob();
 }
 
 export function summarizeSuggestionPriority(priority: string): number {

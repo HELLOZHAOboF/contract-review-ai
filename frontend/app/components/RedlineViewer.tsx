@@ -40,7 +40,7 @@ function tlIcon(dev?: string, conf?: number): string {
   return "⚫";
 }
 
-// One-click ACTA rewrite via the Python ACTA rewrite endpoint
+// 一键生成标准重写建议
 async function runACTARewrite(clauses: Record<string, Clause>): Promise<Record<string, string>> {
   const deviating = Object.fromEntries(
     Object.entries(clauses).filter(([, clause]) => clause.deviation !== "aligned"),
@@ -59,10 +59,10 @@ async function runACTARewrite(clauses: Record<string, Clause>): Promise<Record<s
 export default function RedlineViewer({ redlines, jumpToClause }: Props) {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [filter, setFilter]     = useState<"all" | "critical" | "minor" | "aligned">("all");
-  const [actaMode, setActaMode]     = useState(false);
-  const [actaLoading, setActaLoading] = useState(false);
-  const [actaRewrites, setActaRewrites] = useState<Record<string, string>>({});
-  const [actaMemo, setActaMemo]     = useState("");
+  const [rewriteMode, setRewriteMode] = useState(false);
+  const [rewriteLoading, setRewriteLoading] = useState(false);
+  const [rewriteMap, setRewriteMap] = useState<Record<string, string>>({});
+  const [rewriteMemo, setRewriteMemo] = useState("");
 
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
@@ -91,17 +91,17 @@ export default function RedlineViewer({ redlines, jumpToClause }: Props) {
     aligned:  entries.filter(([, c]) => c.deviation === "aligned").length,
   };
 
-  const handleACTAMode = async () => {
-    setActaLoading(true); setActaMode(false); setActaRewrites({}); setActaMemo("");
+  const handleRewriteMode = async () => {
+    setRewriteLoading(true); setRewriteMode(false); setRewriteMap({}); setRewriteMemo("");
     const rewrites = await runACTARewrite(redlines);
     const names = Object.keys(rewrites);
-    setActaRewrites(rewrites);
-    setActaMemo(
+    setRewriteMap(rewrites);
+    setRewriteMemo(
       names.length > 0
-        ? `ACTA RESET MEMO — ${new Date().toLocaleDateString()}\n\nAll clause changes apply the pre-negotiated ACTA compromise.\n\n${names.map((n, i) => `${i + 1}. ${n} — Rewritten to ACTA standard.`).join("\n")}\n\nBoth parties are encouraged to confirm alignment.`
-        : "All clauses are already ACTA-compliant."
+        ? `重写说明 — ${new Date().toLocaleDateString()}\n\n以下条款已按当前合同基线生成重写建议。\n\n${names.map((n, i) => `${i + 1}. ${n} — 已生成建议稿。`).join("\n")}\n\n建议结合业务要求再次确认。`
+        : "当前条款已基本符合合同基线。"
     );
-    setActaMode(true); setActaLoading(false);
+    setRewriteMode(true); setRewriteLoading(false);
   };
 
   if (entries.length === 0) {
@@ -109,7 +109,7 @@ export default function RedlineViewer({ redlines, jumpToClause }: Props) {
       <div style={{ padding: 40, textAlign: "center", color: "#7a9088",
         fontFamily: "var(--mono, monospace)", fontSize: 13,
         border: "1px dashed rgba(90,110,90,0.2)", borderRadius: 12 }}>
-        No clauses analyzed yet.
+        暂无已分析条款。
       </div>
     );
   }
@@ -279,38 +279,38 @@ export default function RedlineViewer({ redlines, jumpToClause }: Props) {
 
       {/* Traffic light legend */}
       <div className="tl-legend">
-        <span className="tl-legend-title">Risk Key:</span>
-        <div className="tl-item">🔴 <span>Critical — must replace</span></div>
-        <div className="tl-item">🟡 <span>Minor — revise</span></div>
-        <div className="tl-item">🟢 <span>Aligned — ACTA compliant</span></div>
-        <div className="tl-item">⚫ <span>Unknown — human review</span></div>
+        <span className="tl-legend-title">风险说明：</span>
+        <div className="tl-item">🔴 <span>高风险 — 需要替换</span></div>
+        <div className="tl-item">🟡 <span>需关注 — 建议修改</span></div>
+        <div className="tl-item">🟢 <span>已对齐 — 符合基准</span></div>
+        <div className="tl-item">⚫ <span>未识别 — 需人工复核</span></div>
       </div>
 
       {/* One-click ACTA mode */}
       <div className="acta-bar">
         <div>
-          <div className="acta-bar-label">⚡ One-Click ACTA Mode</div>
-          <div className="acta-bar-sub">Rewrite every deviating clause to ACTA standard · generates negotiation memo</div>
+          <div className="acta-bar-label">⚡ 一键标准条款模式</div>
+          <div className="acta-bar-sub">将所有偏离条款重写为标准版本 · 自动生成修改纪要</div>
         </div>
         <div style={{ display: "flex", gap: 8 }}>
-          {actaMode && (
-            <button className="acta-btn-ghost" onClick={() => { setActaMode(false); setActaRewrites({}); setActaMemo(""); }}>
-              Clear
+          {rewriteMode && (
+            <button className="acta-btn-ghost" onClick={() => { setRewriteMode(false); setRewriteMap({}); setRewriteMemo(""); }}>
+              清空
             </button>
           )}
-          <button className="acta-btn" onClick={handleACTAMode} disabled={actaLoading}>
-            {actaLoading
-              ? <><span className="spin" style={{ width: 12, height: 12, border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "white", borderRadius: "50%" }} /> Rewriting…</>
-              : "⚡ Reset to ACTA Baseline"}
+          <button className="acta-btn" onClick={handleRewriteMode} disabled={rewriteLoading}>
+            {rewriteLoading
+              ? <><span className="spin" style={{ width: 12, height: 12, border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "white", borderRadius: "50%" }} /> 生成中…</>
+              : "⚡ 恢复标准条款"}
           </button>
         </div>
       </div>
 
-      {/* ACTA memo */}
-      {actaMode && actaMemo && (
+      {/* 修改纪要 */}
+      {rewriteMode && rewriteMemo && (
         <div className="acta-memo">
-          <div className="acta-memo-label">✓ ACTA Negotiation Memo</div>
-          {actaMemo}
+          <div className="acta-memo-label">✓ 修改纪要</div>
+          {rewriteMemo}
         </div>
       )}
 
@@ -322,10 +322,10 @@ export default function RedlineViewer({ redlines, jumpToClause }: Props) {
             className={`filter-chip ${filter === f ? `fc-${f}` : ""}`}
             onClick={() => setFilter(f)}
           >
-            {f === "all" ? `All (${entries.length})`
-              : f === "critical" ? `🔴 Critical (${counts.critical})`
-              : f === "minor"    ? `🟡 Minor (${counts.minor})`
-              : `🟢 Aligned (${counts.aligned})`}
+            {f === "all" ? `全部 (${entries.length})`
+              : f === "critical" ? `🔴 高风险 (${counts.critical})`
+              : f === "minor"    ? `🟡 需关注 (${counts.minor})`
+              : `🟢 已对齐 (${counts.aligned})`}
           </button>
         ))}
       </div>
@@ -335,7 +335,7 @@ export default function RedlineViewer({ redlines, jumpToClause }: Props) {
         const isOpen = expanded[key];
         const dev    = clause.deviation ?? "minor";
         const s      = getS(dev);
-const hasRewrite = actaMode && actaRewrites[key];
+const hasRewrite = rewriteMode && rewriteMap[key];
         const isJumped = jumpToClause === key;
 
         return (
@@ -349,14 +349,14 @@ const hasRewrite = actaMode && actaRewrites[key];
               <span style={{ fontSize: 15, flexShrink: 0 }}>{tlIcon(dev, clause.confidence)}</span>
               <div className="clause-name">{key}</div>
 
-              {clause.type && clause.type !== "General Clause" && (
+              {clause.type && clause.type !== "通用条款" && (
                 <span className="clause-type-tag">{clause.type}</span>
               )}
               <div className="severity-badge" style={{ background: s.badge, color: s.text }}>
                 {dev.toUpperCase()}
               </div>
 
-              {hasRewrite && <span className="rewritten-tag">REWRITTEN</span>}
+              {hasRewrite && <span className="rewritten-tag">已重写</span>}
               <span className={`chevron ${isOpen ? "open" : ""}`}>▼</span>
             </div>
 
@@ -364,14 +364,14 @@ const hasRewrite = actaMode && actaRewrites[key];
               <div className="clause-body">
                 {/* Original */}
                 <div>
-                  <div className="section-lbl">📄 Original Clause</div>
+                  <div className="section-lbl">📄 原始条款</div>
                   <div className="original-text">{clause.text}</div>
                 </div>
 
                 {/* Risk */}
                 {clause.risk_reason && (
                   <div>
-                    <div className="section-lbl">⚠️ ACTA Deviation</div>
+                    <div className="section-lbl">⚠️ 偏离说明</div>
                     <div className="risk-text">{clause.risk_reason}</div>
                   </div>
                 )}
@@ -379,23 +379,23 @@ const hasRewrite = actaMode && actaRewrites[key];
                 {/* ACTA rewrite diff OR standard suggestion */}
                 {hasRewrite ? (
                   <div>
-                    <div className="section-lbl">⚡ ACTA Reset</div>
+                    <div className="section-lbl">⚡ 重写建议</div>
                     <div className="diff-wrap">
                       <div className="diff-removed">
-                        <div className="diff-lbl" style={{ color: "#b85450" }}>─ Removed</div>
+                        <div className="diff-lbl" style={{ color: "#b85450" }}>─ 原文</div>
                         {clause.text}
                       </div>
                       <div className="diff-added">
-                        <div className="diff-lbl" style={{ color: "#6a9e78" }}>+ ACTA Standard</div>
-                        {actaRewrites[key]}
+                        <div className="diff-lbl" style={{ color: "#6a9e78" }}>+ 标准版本</div>
+                        {rewriteMap[key]}
                       </div>
                     </div>
                   </div>
                 ) : (
                   clause.suggested_clause && clause.suggested_clause !== clause.text && (
                     <div>
-                      <div className="section-lbl">✏️ AI Redline Suggestion</div>
-                      <div className="acta-tag">✓ ACTA Compliant</div>
+                      <div className="section-lbl">✏️ AI 红线建议</div>
+                      <div className="acta-tag">✓ 已符合基线</div>
                       <div className="suggested-text">{clause.suggested_clause}</div>
                     </div>
                   )

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import shutil
 from pathlib import Path
 
 from docx import Document
@@ -145,14 +146,100 @@ def _structure_from_text(raw_text: str) -> list[Section]:
     return _finalize_sections(_sectionize_entries(entries), normalized)
 
 
-def _read_pdf(file_path: str) -> ParsedDocument:
-    try:
-        from PyPDF2 import PdfReader
-    except ImportError as exc:
-        raise RuntimeError("PyPDF2 is required to parse PDF files.") from exc
+def _extract_pdf_text_with_pypdf2(file_path: str) -> str:
+    from PyPDF2 import PdfReader
 
     reader = PdfReader(file_path)
-    raw_text = "\n".join((page.extract_text() or "").strip() for page in reader.pages).strip()
+    pages: list[str] = []
+    for page in reader.pages:
+        try:
+            text = page.extract_text() or ""
+        except Exception:
+            text = ""
+        text = text.strip()
+        if text:
+            pages.append(text)
+    return "\n".join(pages).strip()
+
+
+def _extract_pdf_text_with_pymupdf(file_path: str) -> str:
+    import fitz  # PyMuPDF
+
+    doc = fitz.open(file_path)
+    pages: list[str] = []
+    for page in doc:
+        text = page.get_text("text") or ""
+        text = text.strip()
+        if text:
+            pages.append(text)
+    return "\n".join(pages).strip()
+
+
+def _extract_pdf_text_with_ocr(file_path: str) -> str:
+    if shutil.which("tesseract") is None:
+        raise RuntimeError("Tesseract OCR is not installed or not on PATH.")
+
+    try:
+        import fitz  # PyMuPDF
+    except ImportError as exc:
+        raise RuntimeError("PyMuPDF is required for OCR fallback rendering.") from exc
+
+    try:
+        from PIL import Image
+    except ImportError as exc:
+        raise RuntimeError("Pillow is required for OCR fallback.") from exc
+
+    try:
+        import pytesseract
+    except ImportError as exc:
+        raise RuntimeError("pytesseract is required for OCR fallback.") from exc
+
+    doc = fitz.open(file_path)
+    ocr_pages: list[str] = []
+    for page in doc:
+        pix = page.get_pixmap(matrix=fitz.Matrix(2, 2), alpha=False)
+        img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+        text = pytesseract.image_to_string(img, lang="chi_sim+eng")
+        text = text.strip()
+        if text:
+            ocr_pages.append(text)
+    return "\n".join(ocr_pages).strip()
+
+
+def _read_pdf(file_path: str) -> ParsedDocument:
+    errors: list[str] = []
+
+    try:
+        raw_text = _extract_pdf_text_with_pymupdf(file_path)
+    except ImportError:
+        raw_text = ""
+        errors.append("PyMuPDF is not installed")
+    except Exception as exc:
+        raw_text = ""
+        errors.append(f"PyMuPDF failed: {exc}")
+
+    if not raw_text:
+        try:
+            raw_text = _extract_pdf_text_with_pypdf2(file_path)
+        except ImportError:
+            errors.append("PyPDF2 is required to parse PDF files.")
+        except Exception as exc:
+            errors.append(f"PyPDF2 failed: {exc}")
+
+    if not raw_text:
+        try:
+            raw_text = _extract_pdf_text_with_ocr(file_path)
+        except Exception as exc:
+            errors.append(f"OCR fallback failed: {exc}")
+
+    if not raw_text:
+        error_detail = "; ".join(errors) if errors else "unable to extract text"
+        raise RuntimeError(
+            "Could not extract readable text from PDF. "
+            "If this is a scanned or image-based PDF, enable OCR or install OCR dependencies. "
+            f"Details: {error_detail}"
+        )
+
     return ParsedDocument(raw_text=raw_text, sections=_structure_from_text(raw_text))
 
 

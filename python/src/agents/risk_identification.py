@@ -45,9 +45,10 @@ Rules:
 """
 
 RISK_PRIORITY = {
-    RiskLevel.RED: 3,
-    RiskLevel.YELLOW: 2,
-    RiskLevel.GREEN: 1,
+    RiskLevel.CRITICAL: 4,
+    RiskLevel.HIGH: 3,
+    RiskLevel.MEDIUM: 2,
+    RiskLevel.LOW: 1,
 }
 
 
@@ -74,7 +75,7 @@ class RiskIdentificationAgent:
             summary = "Reviewed 0 clauses. No clauses were available for ACTA baseline comparison."
             return {
                 "risk_findings": [],
-                "overall_risk_level": RiskLevel.GREEN,
+                "overall_risk_level": RiskLevel.LOW,
                 "risk_score": 0,
                 "risk_summary": summary,
                 "summary": summary,
@@ -175,7 +176,10 @@ class RiskIdentificationAgent:
                     "risk_level": level,
                     "deviation_summary": summary,
                     "suggested_action": action,
-                    "confidence": max(finding.confidence, 0.82 if level is RiskLevel.RED else 0.74),
+                    "confidence": max(
+                        finding.confidence,
+                        0.86 if level is RiskLevel.CRITICAL else (0.78 if level is RiskLevel.HIGH else 0.74),
+                    ),
                     "needs_human_review": True,
                     "risk_type": str(rule["name"]),
                     "rationale": rationale,
@@ -189,7 +193,7 @@ class RiskIdentificationAgent:
         return finding.model_copy(update={"rationale": combined_rationale})
 
     def _build_baseline_rationale(self, finding: RiskFinding) -> str:
-        if finding.risk_level is RiskLevel.GREEN:
+        if finding.risk_level is RiskLevel.LOW:
             return "The clause covers the core protections expected by the ACTA baseline for this clause type."
         if finding.missing_terms:
             missing = ", ".join(finding.missing_terms[:3])
@@ -197,12 +201,12 @@ class RiskIdentificationAgent:
         return "The clause departs from the ACTA baseline and needs legal review."
 
     def _default_buyer_impact(self, finding: RiskFinding) -> str:
-        if finding.risk_level is RiskLevel.GREEN:
+        if finding.risk_level is RiskLevel.LOW:
             return "No material deviation from the ACTA baseline was detected for the drafting party."
         return "The drafting party may lose some ACTA-aligned contractual protection."
 
     def _default_seller_impact(self, finding: RiskFinding) -> str:
-        if finding.risk_level is RiskLevel.GREEN:
+        if finding.risk_level is RiskLevel.LOW:
             return "The clause appears balanced against the ACTA baseline."
         return "The counterparty may retain leverage because the clause is less protective than the ACTA baseline."
 
@@ -237,7 +241,7 @@ class RiskIdentificationAgent:
                     deviation_summary=description,
                     suggested_action=action,
                     confidence=confidence,
-                    needs_human_review=level is RiskLevel.RED or confidence < get_settings().confidence_threshold,
+                    needs_human_review=level is RiskLevel.CRITICAL or confidence < get_settings().confidence_threshold,
                     matched_terms=[],
                     missing_terms=[],
                     risk_type=str(item.get("risk_type", "acta_alignment")).strip() or "acta_alignment",
@@ -266,17 +270,19 @@ class RiskIdentificationAgent:
 
     def _coerce_risk_level(self, value: object) -> RiskLevel:
         normalized = str(value).strip().lower()
-        if normalized == RiskLevel.RED.value:
-            return RiskLevel.RED
-        if normalized == RiskLevel.YELLOW.value:
-            return RiskLevel.YELLOW
-        return RiskLevel.GREEN
+        if normalized in {RiskLevel.CRITICAL.value.lower(), "red", "severe", "danger"}:
+            return RiskLevel.CRITICAL
+        if normalized in {RiskLevel.HIGH.value.lower(), "yellow", "warning"}:
+            return RiskLevel.HIGH
+        if normalized in {RiskLevel.MEDIUM.value.lower(), "medium", "moderate", "minor"}:
+            return RiskLevel.MEDIUM
+        return RiskLevel.LOW
 
     def _default_action(self, level: RiskLevel, clause_type: ClauseType) -> str:
-        if level is RiskLevel.GREEN:
+        if level is RiskLevel.LOW:
             return "No redline required."
         standard_text = str(PLAYBOOK[clause_type]["standard_text"])
-        if level is RiskLevel.RED:
+        if level is RiskLevel.CRITICAL:
             return f"Escalate and replace with ACTA baseline language: {standard_text}"
         return f"Align this clause more closely with the ACTA baseline: {standard_text}"
 
@@ -328,20 +334,23 @@ class RiskIdentificationAgent:
         return ordered
 
     def _calculate_overall_risk(self, findings: list[RiskFinding]) -> RiskLevel:
-        if any(finding.risk_level is RiskLevel.RED for finding in findings):
-            return RiskLevel.RED
-        if any(finding.risk_level is RiskLevel.YELLOW for finding in findings):
-            return RiskLevel.YELLOW
-        return RiskLevel.GREEN
+        if any(finding.risk_level is RiskLevel.CRITICAL for finding in findings):
+            return RiskLevel.CRITICAL
+        if any(finding.risk_level is RiskLevel.HIGH for finding in findings):
+            return RiskLevel.HIGH
+        if any(finding.risk_level is RiskLevel.MEDIUM for finding in findings):
+            return RiskLevel.MEDIUM
+        return RiskLevel.LOW
 
     def _generate_summary(self, findings: list[RiskFinding], overall: RiskLevel) -> str:
-        red = sum(1 for finding in findings if finding.risk_level is RiskLevel.RED)
-        yellow = sum(1 for finding in findings if finding.risk_level is RiskLevel.YELLOW)
-        green = sum(1 for finding in findings if finding.risk_level is RiskLevel.GREEN)
+        critical = sum(1 for finding in findings if finding.risk_level is RiskLevel.CRITICAL)
+        high = sum(1 for finding in findings if finding.risk_level is RiskLevel.HIGH)
+        medium = sum(1 for finding in findings if finding.risk_level is RiskLevel.MEDIUM)
+        low = sum(1 for finding in findings if finding.risk_level is RiskLevel.LOW)
         return (
             f"Reviewed {len(findings)} clauses. "
             f"Compared them against the ACTA baseline and detected "
-            f"{red} critical, {yellow} moderate, and {green} aligned clauses. "
+            f"{critical} critical, {high} high, {medium} moderate, and {low} aligned clauses. "
             f"Overall ACTA deviation risk is {overall.value}."
         )
 
@@ -350,9 +359,10 @@ class RiskIdentificationAgent:
             return 0
 
         severity_weights = {
-            RiskLevel.RED: 1.0,
-            RiskLevel.YELLOW: 0.50,
-            RiskLevel.GREEN: 0.12,
+            RiskLevel.CRITICAL: 1.0,
+            RiskLevel.HIGH: 0.8,
+            RiskLevel.MEDIUM: 0.50,
+            RiskLevel.LOW: 0.12,
         }
         weighted_total = sum(
             severity_weights[finding.risk_level] * max(finding.confidence, 0.35)
@@ -361,29 +371,34 @@ class RiskIdentificationAgent:
         average_risk = weighted_total / len(findings)
 
         score = round(average_risk * 100)
-        red_count = sum(1 for finding in findings if finding.risk_level is RiskLevel.RED)
-        yellow_count = sum(1 for finding in findings if finding.risk_level is RiskLevel.YELLOW)
+        critical_count = sum(1 for finding in findings if finding.risk_level is RiskLevel.CRITICAL)
+        high_count = sum(1 for finding in findings if finding.risk_level is RiskLevel.HIGH)
+        medium_count = sum(1 for finding in findings if finding.risk_level is RiskLevel.MEDIUM)
 
         # Material red/yellow counts should move the score meaningfully even when
         # the underlying confidence values are close together.
-        score += min(red_count * 8, 18)
-        score += min(yellow_count * 3, 9)
+        score += min(critical_count * 10, 20)
+        score += min(high_count * 6, 12)
+        score += min(medium_count * 3, 9)
 
-        if red_count > 0:
-            score = max(score, 55)
-        elif yellow_count > 0:
+        if critical_count > 0:
+            score = max(score, 65)
+        elif high_count > 0:
+            score = max(score, 50)
+        elif medium_count > 0:
             score = max(score, 28)
 
         return min(score, 100)
 
     def _generate_k2_required_summary(self, findings: list[RiskFinding], overall: RiskLevel) -> str:
-        red = sum(1 for finding in findings if finding.risk_level is RiskLevel.RED)
-        yellow = sum(1 for finding in findings if finding.risk_level is RiskLevel.YELLOW)
-        green = sum(1 for finding in findings if finding.risk_level is RiskLevel.GREEN)
+        critical = sum(1 for finding in findings if finding.risk_level is RiskLevel.CRITICAL)
+        high = sum(1 for finding in findings if finding.risk_level is RiskLevel.HIGH)
+        medium = sum(1 for finding in findings if finding.risk_level is RiskLevel.MEDIUM)
+        low = sum(1 for finding in findings if finding.risk_level is RiskLevel.LOW)
         return (
             f"Reviewed {len(findings)} clauses. "
             f"K2 analysis is required for final ACTA risk identification and was unavailable, "
             f"so these results are provisional rule-based screening only: "
-            f"{red} critical, {yellow} moderate, and {green} aligned clauses. "
+            f"{critical} critical, {high} high, {medium} moderate, and {low} aligned clauses. "
             f"Provisional ACTA deviation risk is {overall.value}."
         )
