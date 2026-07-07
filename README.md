@@ -18,6 +18,14 @@ This project is designed to make contract review faster, clearer, and more expla
 - **Portfolio-friendly UI** with a polished dashboard, document viewer, and workflow views
 - **Real-world contract focus** covering engineering consulting and professional service agreements
 
+## Quick Facts
+
+- **Project type:** Full-stack AI contract review platform
+- **Frontend:** Next.js + React + TypeScript
+- **Backend:** FastAPI + Python
+- **Core value:** Turns contract review into a guided, explainable workflow
+- **Best for:** Portfolio, internship interviews, and AI/product engineering demos
+
 ## Screenshots
 
 ### 1. Home Dashboard
@@ -60,6 +68,14 @@ This project is designed to make contract review faster, clearer, and more expla
 - 审查流程预测与角色画像分析
 - PDF 报告导出
 
+## How it works
+
+1. 用户上传合同文件
+2. 后端解析文档并提取文本
+3. 系统识别条款风险并生成红线建议
+4. 用户可以继续追问 AI，补充信息后重新分析
+5. 最终可导出 PDF 审查报告
+
 ## 技术栈
 
 ### Frontend
@@ -88,6 +104,7 @@ This project is designed to make contract review faster, clearer, and more expla
 - **面试友好**：每个分析结果都可解释，方便展示思路而不是只展示结论
 - **交互性强**：用户可针对系统追问继续补充信息并重新分析
 - **适合真实业务场景**：覆盖工程咨询和专业服务合同中的高频审查需求
+- **作品集表达清晰**：主页、分析页、红线页、问答页、流程页和角色画像页都已经可视化呈现
 
 ## 本地运行
 
