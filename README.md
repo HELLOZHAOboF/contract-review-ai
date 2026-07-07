@@ -18,6 +18,38 @@ This project is designed to make contract review faster, clearer, and more expla
 - **Portfolio-friendly UI** with a polished dashboard, document viewer, and workflow views
 - **Real-world contract focus** covering engineering consulting and professional service agreements
 
+## Screenshots
+
+### 1. Home Dashboard
+![Home Dashboard](./frontend/public/images/screenshots/01.png)
+
+上传入口与核心功能概览集中展示，用户可以快速开始合同审查流程，并直观看到平台支持的主要分析能力。
+
+### 2. Document Analysis View
+![Document Analysis View](./frontend/public/images/screenshots/02.png)
+
+上传合同后，系统会自动解析文本并高亮关键信息，同时给出风险评分、条款分布和可视化摘要，帮助用户快速定位重点内容。
+
+### 3. Redline Recommendations
+![Redline Recommendations](./frontend/public/images/screenshots/03.png)
+
+系统会针对高风险条款生成红线建议与修改方向，帮助用户快速理解哪里有问题，以及应该如何调整条款。
+
+### 4. AI Q&A Assistant
+![AI Q&A Assistant](./frontend/public/images/screenshots/04.png)
+
+用户可以围绕合同内容继续追问，系统会结合当前合同上下文进行回答，适合进一步确认条款含义、风险点和修改思路。
+
+### 5. Review Workflow Timeline
+![Review Workflow Timeline](./frontend/public/images/screenshots/05.png)
+
+系统会展示审查流程与阶段性结果，帮助用户了解当前分析进度，并预测后续审查和协商的重点步骤。
+
+### 6. Persona & Negotiation Preference Insights
+![Persona & Negotiation Preference Insights](./frontend/public/images/screenshots/06.png)
+
+根据合作对象类型，系统会提前预测对方更可能关注或争议的条款，帮助用户更快制定审查和谈判策略。
+
 ## 核心功能
 
 - 合同文件上传与解析，支持 PDF / DOCX / TXT
